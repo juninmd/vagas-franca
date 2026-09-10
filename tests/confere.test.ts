@@ -202,10 +202,52 @@ describe("confereJornada — palavra a palavra", () => {
   test("formatos reais de jornada continuam passando", () => {
     for (const v of [
       "Escala 6x1",
-      "Seg. a Sex. 08h às 17h",
-      "Escala 6x1 — folga aos domingos",
+      "Escala 6x1 - folga aos domingos",
       "44h semanais",
+      "Seg a Sex 08h às 17h",
     ])
       expect(confereJornada(v, `${desc} folga aos domingos`)).toBe(v);
+
+    // O ponto é removido, não rejeitado: é ele que faz o cliente do Telegram
+    // transformar `vale-cesta-basica.com` em link clicável.
+    expect(confereJornada("Seg. a Sex. 08h às 17h", desc)).toBe(
+      "Seg a Sex 08h às 17h",
+    );
+  });
+
+  test("número que não é horário não passa, mesmo só com dígitos", () => {
+    // O léxico só olha palavra; a carga aqui não tem NENHUMA palavra fora do
+    // léxico — o que a barra é a forma do número. Sem essa regra, um telefone
+    // de recrutador viajava na linha da jornada, e a âncora não ajuda: o
+    // atacante escreveu a descrição, então o número está lá.
+    const desc =
+      "Turno das 18h as 22h. Duvidas com o RH pelo 16 99999 0000 ou 0800 771 1234.";
+    for (const v of [
+      "18h as 22h 16 99999 0000",
+      "18h as 22h ☎ 16999990000",
+      "das 18h as 22h 0800 771 1234",
+      "18h as 22h 16999990000",
+    ])
+      expect(confereJornada(v, desc)).toBe(null);
+
+    // E a jornada legítima da MESMA descrição continua passando.
+    expect(confereJornada("18h as 22h", desc)).toBe("18h as 22h");
+  });
+
+  test("benefício com dígitos de telefone não passa", () => {
+    const desc = "Vale alimentacao. Contato 16 999 990 000.";
+    expect(confereBeneficios("vale 16 999 990 000", desc)).toBe(null);
+    expect(confereBeneficios("vale alimentacao", desc)).toBe(
+      "vale alimentacao",
+    );
+  });
+});
+
+describe("beneficios: ruido de corte", () => {
+  test("conjuncao pendurada nao vai pro post", () => {
+    const desc = "Oferecemos Vale-Transporte e, Vale-Refeicao, Alimentacao.";
+    expect(confereBeneficios("Vale-Transporte e, Vale-Refeicao", desc)).toBe(
+      "Vale-Transporte, Vale-Refeicao",
+    );
   });
 });

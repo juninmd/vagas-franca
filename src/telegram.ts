@@ -188,7 +188,9 @@ function quebraLonga(linha: string, max: number): string[] {
       let barras = 0;
       while (fim - 1 - barras >= i && linha[fim - 1 - barras] === "\\")
         barras++;
-      if (barras % 2 === 1) fim--;
+      // `fim > i + 1` guarda o laço: com `max === 1` numa barra, o recuo
+      // zerava o pedaço e o índice nunca andava.
+      if (barras % 2 === 1 && fim > i + 1) fim--;
     }
     partes.push(linha.slice(i, fim));
     i = fim;

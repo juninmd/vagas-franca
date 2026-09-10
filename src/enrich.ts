@@ -92,7 +92,7 @@ async function runBatch(batch: Job[]): Promise<Resultado> {
     // é descartado no banco, e contá-lo inflava o número do log.
     if (applyEnrichment(job.id, { salary, schedule, benefits: beneficios }))
       preenchidas++;
-    else if (beneficios)
+    else if (beneficios && !salary)
       // O descarte é deliberado, mas não pode ser mudo: a vaga sai `enriched`
       // e a extração não é refeita, então o benefício se perde de vez.
       console.warn(

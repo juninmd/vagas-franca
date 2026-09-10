@@ -30,6 +30,10 @@ process.env.ANTHROPIC_API_KEY = "chave-de-teste";
 process.env.GEMINI_API_KEY = "chave-de-teste";
 // A chave falsa impede o vazamento de credencial, não a requisição: sem isto o
 // endereço continua sendo o do cluster real do desenvolvedor.
+// `AI_PROVIDER` fixo também: com `openai`/`anthropic`/`google` no `.env` do
+// desenvolvedor, `src/ai.ts` mira endereço real embutido no código e o
+// `fetch` de negação vira a ÚNICA linha de defesa.
+process.env.AI_PROVIDER = "ollama";
 process.env.LITELLM_BASE_URL = "http://127.0.0.1:1/v1";
 process.env.OLLAMA_BASE_URL = "http://127.0.0.1:1";
 
