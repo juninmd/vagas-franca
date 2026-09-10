@@ -1,0 +1,3 @@
+[test]
+# Isola a suíte do banco de produção. Ver tests/setup.ts.
+preload = ["./tests/setup.ts"]
