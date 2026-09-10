@@ -259,7 +259,7 @@ const enrichStmt = db.prepare<
   `UPDATE jobs SET enriched = 1,
      salary = CASE
        WHEN instr(COALESCE(jobs.salary, ''), ' · ') > 0 THEN jobs.salary
-       ELSE substr(COALESCE(jobs.salary, ?1) || COALESCE(' · ' || ?3, ''), 1, 120)
+       ELSE substr(COALESCE(jobs.salary, ?1) || COALESCE(' · ' || ?3, ''), 1, 160)
      END,
      schedule = COALESCE(jobs.schedule, ?2)
    WHERE id = ?4`,
@@ -288,9 +288,10 @@ export function applyEnrichment(
   // informaria errado quem lê o post pra decidir se vale a candidatura. Quem
   // chama precisa saber que a linha não mudou, e é o que o retorno diz.
   //
-  // O teto de 120 é rede: `confere` corta salário em 40 e `confereBeneficios`
-  // em 3×24, então a soma não alcança o corte — que, se alcançasse, deixaria
-  // um " ·" pendurado que o `instr` impediria de ser consertado depois.
+  // O teto de 160 é rede, e tem que ser MAIOR que a soma real dos limites:
+  // 44 do `confere` + 3 + 3x32+4 do `confereBeneficios` = 147. Com o teto em
+  // 120 o corte era alcançável e deixava um " ·" pendurado que o `instr`
+  // impedia de ser consertado depois.
   const antes = enrichLido.get(id);
   enrichStmt.run(
     fields.salary ?? null,

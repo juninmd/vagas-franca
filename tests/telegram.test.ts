@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { sendTelegram } from "../src/telegram.ts";
+import { sendTelegram, split } from "../src/telegram.ts";
 
 /**
  * O contrato que o digest inteiro depende: `sendTelegram` só devolve true se a
@@ -130,4 +130,43 @@ describe("sendTelegram — 429 com espera absurda", () => {
     // Teto de 120s por espera; o teste só prova que não são 3600s.
     expect(gasto).toBeLessThan(3600_000);
   }, 20_000);
+});
+
+/**
+ * O corte acontece DEPOIS do escape de Markdown. Cortar em cima da barra
+ * publica um pedaço terminado em `\` solto (400) e o pedaço seguinte começa
+ * com o metacaractere que aquela barra protegia — o resto do post vira itálico.
+ */
+describe("split", () => {
+  const juntaTudo = (partes: string[]) => partes.join("");
+
+  test("nenhum pedaço termina em barra ímpar", () => {
+    const linha = "a\\_b\\_c\\_d\\_e\\_f\\_g\\_h";
+    for (let max = 2; max <= linha.length; max++) {
+      for (const parte of split(linha, max)) {
+        const barras = /(\\+)$/.exec(parte)?.[1].length ?? 0;
+        expect(barras % 2).toBe(0);
+      }
+    }
+  });
+
+  test("recuar no corte não perde caractere", () => {
+    const linha = `${"x".repeat(30)}\\_${"y".repeat(30)}`;
+    expect(juntaTudo(split(linha, 31))).toBe(linha);
+  });
+
+  test("linha de barras com max mínimo termina", () => {
+    // Com `max === 1` numa barra o recuo zerava o pedaço e o índice nunca
+    // andava: o cron travava numa thread só, sem log, até o timeout do host.
+    const partes = split("\\\\\\\\", 1);
+    expect(juntaTudo(partes)).toBe("\\\\\\\\");
+  });
+
+  test("quebra em fim de linha e respeita o teto", () => {
+    const texto = Array.from({ length: 50 }, (_, i) => `linha ${i}`).join("\n");
+    const partes = split(texto, 60);
+    expect(partes.length).toBeGreaterThan(1);
+    for (const p of partes) expect(p.length).toBeLessThanOrEqual(60);
+    expect(partes.join("\n").replace(/\n+/g, "\n")).toBe(texto);
+  });
 });

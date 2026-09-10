@@ -41,6 +41,23 @@ export const normaliza = (s: string) =>
 
 const palavras = (s: string) => normaliza(s).split(" ").filter(Boolean);
 
+/**
+ * Alfabeto do que pode ser IMPRESSO. `normaliza` apaga o que não é letra ou
+ * dígito — então o que ela apaga nunca era conferido, e o que voltava era o
+ * texto ORIGINAL: `escala turno-com.folga` e `18h as 22h ☎ 16999990000` saíam
+ * inteiros no post. Conferir uma string e publicar outra é o furo; aqui as
+ * duas passam a ser a mesma.
+ *
+ * Só latino, dígito e a pontuação que jornada e benefício realmente usam. Sem
+ * `.` e sem `@`: o cliente do Telegram transforma domínio solto em link, e
+ * `com` é palavra do léxico — `vale-cesta-basica.com` era um link clicável
+ * dentro do post, montado só com palavras aprovadas.
+ */
+const PUBLICAVEL = /[^A-Za-zÀ-ÖØ-öø-ÿ0-9 ,:/$-]+/g;
+
+const limpaPublicavel = (s: string) =>
+  s.replace(PUBLICAVEL, " ").replace(/\s+/g, " ").trim();
+
 const conjunto = (...listas: string[][]) => new Set(listas.flat());
 
 /**
@@ -59,7 +76,9 @@ const numerosDe = (s: string): Set<string> => {
       .replace(/[.,]+$/, "")
       .replace(/\./g, "")
       .replace(/,\d{2}$/, "")
-      .replace(/,/g, "");
+      .replace(/,/g, "")
+      // "08h" na descrição e "8h" na resposta são o mesmo horário.
+      .replace(/^0+(?=\d)/, "");
     if (n) set.add(n);
   }
   return set;
@@ -157,6 +176,15 @@ const TEMPO = [
   "folga",
   "folgas",
   "revezamento",
+  "almoco",
+  "alternado",
+  "alternados",
+  "periodo",
+  "manha",
+  "tarde",
+  "noite",
+  "flexivel",
+  "escalas",
 ];
 const LIGACAO = [
   "a",
@@ -198,17 +226,34 @@ export function confereJornada(
   texto: string,
 ): string | null {
   if (!valor) return null;
-  const v = valor.trim().replace(/\s+/g, " ");
+  const v = limpaPublicavel(valor.slice(0, 200));
   if (!v || v.length > 60 || LIXO.test(v) || !TEM_HORARIO.test(v)) return null;
   for (const p of palavras(v)) {
-    // Token numérico ("6x1", "07", "44") é validado pela ancoragem abaixo.
     if (/^\d/.test(p)) continue;
     if (!LEXICO_JORNADA.has(p)) return null;
   }
+  // Todo número de uma jornada faz parte de uma expressão de horário. Sem esta
+  // regra, o `continue` acima isentava QUALQUER token que começa com dígito, e
+  // "18h as 22h 16 99999 0000" ia inteiro pra linha do 🕑 — a ancoragem não
+  // ajudava, porque quem escreveu a descrição foi quem plantou o telefone.
+  const sobra = v
+    .replace(/\d{1,2}\s*[:h]\s*\d{0,2}/gi, " ")
+    .replace(/\d{1,2}\s*x\s*\d{1,2}/gi, " ")
+    .replace(/\d{2,3}\s*h(oras?)?\b/gi, " ");
+  if (/\d/.test(sobra)) return null;
   const nosTexto = numerosDe(texto);
-  if (![...numerosDe(v)].every((n) => nosTexto.has(n))) return null;
+  const nosValor = [...numerosDe(v)];
+  // Sem número nenhum, a ancoragem numérica é vazia — `[].every()` é true — e
+  // sobrava uma jornada aprovada sem NADA ligá-la à vaga. Como o índice do
+  // lote é escolhido pelo modelo, dava pra plantar texto na vaga de outra
+  // empresa sem tocar na descrição dela. Aí o item inteiro tem que estar lá.
+  if (!nosValor.length) return fonteContem(texto, v) ? v : null;
+  if (!nosValor.every((n) => nosTexto.has(n))) return null;
   return v;
 }
+
+const fonteContem = (texto: string, valor: string) =>
+  normaliza(texto).includes(normaliza(valor));
 
 /**
  * Léxico de benefício no mercado brasileiro, palavra a palavra. É fechado de
@@ -237,6 +282,7 @@ const BENEFICIO = [
   "medico",
   "saude",
   "odontologico",
+  "odontologica",
   "odonto",
   "dental",
   "seguro",
@@ -279,9 +325,31 @@ const BENEFICIO = [
   "combustivel",
   "moradia",
   "aniversario",
+  "adicional",
+  "noturno",
+  "insalubridade",
+  "periculosidade",
+  "gas",
+  "vacinacao",
 ];
 /** Palavra que não é benefício sozinha, mas liga dois que são. */
-const COLA = ["de", "da", "do", "e", "no", "na", "em", "com", "mais", "r"];
+const COLA = [
+  "de",
+  "da",
+  "do",
+  "das",
+  "dos",
+  "e",
+  "no",
+  "na",
+  "nos",
+  "nas",
+  "aos",
+  "em",
+  "com",
+  "mais",
+  "r",
+];
 const LEXICO_BENEFICIO = conjunto(BENEFICIO, COLA);
 const NUCLEO_BENEFICIO = new Set(BENEFICIO);
 
@@ -301,22 +369,33 @@ export function confereBeneficios(
   if (!valor) return null;
   const fonte = normaliza(texto);
   const itens: string[] = [];
-  for (const bruto of valor.split(/[,;/|+]|\se\s/)) {
+  const vistos = new Set<string>();
+  for (const bruto of valor.slice(0, 300).split(/[,;/|+]|\se\s/)) {
     // Parêntese sai: a lista costuma ser cortada no meio de um ("Ticket
     // Alimentação (R$ 680") e o par aberto sem fechar fica feio na linha.
-    const item = bruto
-      .replace(/[()]/g, " ")
-      .trim()
-      .replace(/\s+/g, " ")
-      .replace(/[:;.\-–]+$/, "");
+    const item = limpaPublicavel(bruto)
+      .replace(/[:;\-–]+$/, "")
+      // "Vale-Transporte e, Vale-Refeição" corta na vírgula e a conjunção fica
+      // pendurada no item — é palavra de léxico, então passa e vai pro post.
+      .replace(/\s+(?:e|de|da|do|com|mais)$/i, "")
+      .trim();
     if (!item || item.length > 32) continue;
     const ps = palavras(item);
     if (!ps.length || ps.length > 5) continue;
-    // Número curto passa ("vale de 500"); corrida longa de dígitos é telefone.
-    if (!ps.every((p) => LEXICO_BENEFICIO.has(p) || /^\d{1,3}$/.test(p)))
+    // UM número por item, e curto: é valor ("vale de 500"), não telefone.
+    // `\d{1,3}` sem limite de quantidade deixava passar "vale 16 999 990 000".
+    const numeros = ps.filter((p) => /^\d/.test(p));
+    if (numeros.length > 1 || numeros.some((n) => !/^\d{1,4}$/.test(n)))
+      continue;
+    if (!ps.every((p) => LEXICO_BENEFICIO.has(p) || /^\d{1,4}$/.test(p)))
       continue;
     if (!ps.some((p) => NUCLEO_BENEFICIO.has(p))) continue;
     if (!fonte.includes(normaliza(item))) continue;
+    // Repetido não multiplica a linha: o mesmo item três vezes triplicava o
+    // orçamento de caracteres.
+    const chave = normaliza(item);
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
     itens.push(item);
     if (itens.length === 3) break;
   }

@@ -152,11 +152,25 @@ export const mdSafe = (s: string) => s.replace(/([\\_*[\]`])/g, "\\$1");
  */
 export function contatoSeguro(raw: string | null): string | null {
   if (!raw) return null;
+  // Teto na entrada: `contact` não tem limite de tamanho em lugar nenhum (a
+  // `description` tem, a ACIF corta em 1500) e a busca do e-mail é quadrática
+  // numa corrida longa sem `@` — 160 mil caracteres levavam 40s e o digest é
+  // de uma thread só.
+  const texto = raw.slice(0, 500);
   const partes: string[] = [];
-  const email = raw.match(/[\w.+-]+@[\w-]+\.[\w.-]{2,}/);
-  if (email) partes.push(email[0].slice(0, 60));
-  // Telefone brasileiro com ou sem DDD, aceitando os separadores usuais.
-  const fone = raw.match(/(?:\(?\d{2}\)?[\s.-]?)?(?:9\s?)?\d{4}[\s.-]?\d{4}/);
+  // `\w` não casa letra acentuada: em "seleção@empresa.com.br" o casamento
+  // começava DEPOIS do "ç" e publicava "o@empresa.com.br" — um endereço
+  // diferente, plausível, para o qual a pessoa manda currículo e ninguém
+  // recebe. Errar o endereço é pior que não ter endereço.
+  const email = texto.match(
+    /(?<![\p{L}\p{N}._+-])[\p{L}\p{N}._+-]+@[\p{L}\p{N}-]+\.[\p{L}\p{N}.-]{2,}/u,
+  );
+  if (email) partes.push(email[0].replace(/[.,;:)]+$/, "").slice(0, 60));
+  // Telefone brasileiro: fixo, celular com nono dígito, ou 0800. As bordas
+  // impedem que um número de protocolo ("Vaga ref. 20240115") vire telefone.
+  const fone = texto.match(
+    /(?<!\d)(?:0800[\s.-]?\d{3}[\s.-]?\d{4}|\(?\d{2}\)?[\s.-]?9?\d{4}[\s.-]?\d{4})(?!\d)/,
+  );
   if (fone) partes.push(fone[0].trim().slice(0, 20));
   return partes.length ? partes.join(" · ") : null;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   cargoBase,
+  contatoSeguro,
   ehCadastroDeCurriculo,
   ehPcd,
   formataSalario,
@@ -247,5 +248,60 @@ describe("mdSafe", () => {
     expect(mdSafe("Auxiliar de Produção — Franca/SP")).toBe(
       "Auxiliar de Produção — Franca/SP",
     );
+  });
+});
+
+/**
+ * `contact` vem do mural da ACIF, digitado pelo anunciante, e ia verbatim e sem
+ * teto pra linha do ✉️ — a maior superfície livre do post, mais larga que tudo
+ * que passa pela conferência da IA.
+ */
+describe("contatoSeguro", () => {
+  test("e-mail com acento não pode virar OUTRO e-mail", () => {
+    // `\w` sem flag `u` não casa letra acentuada: o casamento começava depois
+    // do "ç" e o post publicava "o@empresa.com.br" — endereço plausível, real,
+    // e errado. Quem se candidata manda currículo pro vazio.
+    expect(contatoSeguro("seleção@empresa.com.br")).toBe(
+      "seleção@empresa.com.br",
+    );
+    expect(contatoSeguro("João.Silva@empresa.com.br")).toBe(
+      "João.Silva@empresa.com.br",
+    );
+  });
+
+  test("formatos reais do mural passam", () => {
+    expect(contatoSeguro("ralexandre.fra@gmail.com · 16992517497")).toBe(
+      "ralexandre.fra@gmail.com · 16992517497",
+    );
+    expect(contatoSeguro("(16) 99262-2752")).toBe("(16) 99262-2752");
+    expect(contatoSeguro("16 3723-0104")).toBe("16 3723-0104");
+    expect(contatoSeguro("0800 771 1234")).toBe("0800 771 1234");
+  });
+
+  test("número que não é telefone não vira telefone", () => {
+    // Sem borda, qualquer corrida de 8 dígitos virava "contato".
+    expect(contatoSeguro("Vaga ref. 20240115 - comparecer ao PAT")).toBe(null);
+    expect(contatoSeguro("CLIQUE AQUI http://mau.example/x agora")).toBe(null);
+  });
+
+  test("texto livre do anunciante não é publicado", () => {
+    expect(contatoSeguro("Fale com Ana na loja, urgente!")).toBe(null);
+    expect(contatoSeguro("")).toBe(null);
+    expect(contatoSeguro(null)).toBe(null);
+  });
+
+  test("pontuação final não gruda no e-mail", () => {
+    expect(contatoSeguro("Enviar currículo para rh@empresa.com.br.")).toBe(
+      "rh@empresa.com.br",
+    );
+  });
+
+  test("campo gigante não pendura o digest", () => {
+    // A busca do e-mail é quadrática numa corrida longa sem `@`, e `contact`
+    // não tem teto em lugar nenhum: 160 mil caracteres levavam 40s, numa
+    // thread só, dentro da janela do cron.
+    const t0 = Date.now();
+    contatoSeguro("a".repeat(160_000));
+    expect(Date.now() - t0).toBeLessThan(1000);
   });
 });
