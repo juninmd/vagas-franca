@@ -21,7 +21,8 @@ if (args.has("--ingest")) {
   console.log(`  fuso:     ${env.cronTimezone}`);
   console.log(`  ingestão: ${env.cronIngestion}`);
   console.log(`  digest:   ${env.cronDigest}`);
-  await ingest(hoje());
+  // Falha na ingestão inicial não pode impedir o agendamento do cron.
+  await ingest(hoje()).catch(console.error);
   // Fuso explícito: o container nasce em UTC e "8h da manhã" é BRT. Sem isso o
   // digest saía às 5h da manhã em qualquer host que não fosse UTC.
   const opts = { timezone: env.cronTimezone };
