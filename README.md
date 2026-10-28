@@ -20,6 +20,7 @@ Google News (RSS)   ─┘        │
 |---|---|---|
 | **Mural ACIF** (Assoc. Comercial e Industrial de Franca) | endpoints da SPA: `empregos-acif/carregar_vagas.php?pagina=N` + `detalhes_vaga.php?id=N` (JSON) | ~87 vagas de empresas da cidade, **com e-mail/telefone de contato** e requisitos (onde o horário aparece) |
 | **Gupy** (portal público) | API JSON `employability-portal.gupy.io` | ~130 vagas de Franca + ~32 das cidades vizinhas, empresa, contrato, modalidade, descrição |
+| **Emprego Franca** (empregofranca.com.br) | payload RSC do Next.js na página pública `/vagas` (20 vagas, 1 requisição) | salário exato/faixa em campo próprio, contrato, jornada, benefícios e WhatsApp/e-mail |
 | **TrabalhaBrasil** | HTML + `JobPosting` (JSON-LD) na página de detalhe | vagas operacionais, salário do card, descrição completa |
 | **InfoJobs** | HTML da busca de Franca | salário e modalidade em campo próprio |
 | **empregos.com.br** | HTML (SSR) | descrição crua do anunciante — é onde aparecem salário e horário |
@@ -48,6 +49,7 @@ Depois da lista sai um post de análise calculado **em SQL/JS, sem IA** (número
 - salário mediano geral e **mediana + teto por área** (áreas sem amostra são declaradas como tal, não estimadas);
 - o que mais abre vaga, quem mais contrata (rótulos de anonimato como "Empresa Confidencial" e "Página de Carreira" são excluídos);
 - distribuição de contrato, modalidade e cidade;
+- **melhores oportunidades** (`src/destaques.ts`): ranking sem IA — salário (teto R$ 8k), CLT, benefícios, contato direto e empresa identificada; só concorre vaga com salário declarado;
 - os maiores salários do radar e a contagem por fonte.
 
 O parser de salário usa o piso da faixa e ignora valores fora de R$ 800–30.000, senão benefício ("VR 25,00") entra como salário e distorce a mediana.
@@ -90,6 +92,7 @@ bun run ingest            # só coleta
 bun run digest            # só publica (enriquece a fila do dia antes)
 bun start                 # loop com cron
 bun test                  # 80 testes, sem rede
+bun run smoke             # coleta ao vivo (use DB_PATH descartável) e imprime o top 10
 bun run typecheck
 bun run lint
 ```
