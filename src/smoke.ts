@@ -1,12 +1,27 @@
-import { db, type Job } from "./db.ts";
-import { melhoresOportunidades } from "./destaques.ts";
-import { isoDay } from "./digest.ts";
 import { parseSalario } from "./format.ts";
-import { syncAcif } from "./sources/acif.ts";
-import { syncEmpregoFranca } from "./sources/empregofranca.ts";
-import { syncEmpregos } from "./sources/empregos.ts";
-import { syncInfoJobs } from "./sources/infojobs.ts";
-import { syncTrabalhaBrasil } from "./sources/trabalhabrasil.ts";
+
+/**
+ * O smoke GRAVA vagas no banco. `db.ts` abre o banco no import, então o guard
+ * vem antes dos imports dinâmicos: sem `DB_PATH` explícito o script cairia no
+ * `./data/store.db` de produção.
+ */
+if (!process.env.DB_PATH || process.env.DB_PATH === "./data/store.db") {
+  console.error(
+    "smoke: defina DB_PATH para um banco descartável (ex.: DB_PATH=/tmp/smoke.db bun run smoke)",
+  );
+  process.exit(2);
+}
+
+const { melhoresOportunidades } = await import("./destaques.ts");
+const { db } = await import("./db.ts");
+const { isoDay } = await import("./digest.ts");
+const { syncEmpregoFranca } = await import("./sources/empregofranca.ts");
+const { syncAcif } = await import("./sources/acif.ts");
+const { syncTrabalhaBrasil } = await import("./sources/trabalhabrasil.ts");
+const { syncInfoJobs } = await import("./sources/infojobs.ts");
+const { syncEmpregos } = await import("./sources/empregos.ts");
+
+import type { Job } from "./db.ts";
 
 /**
  * Smoke test ao vivo: coleta as fontes alcançáveis, grava no banco de DB_PATH
