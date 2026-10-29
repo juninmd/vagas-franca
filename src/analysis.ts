@@ -1,5 +1,6 @@
 import { AREA_ORDER } from "./config/areas.ts";
 import { db, type Job, lastSnapshot, saveSnapshot } from "./db.ts";
+import { type Destaque, melhoresOportunidades } from "./destaques.ts";
 import {
   cargoBase,
   ehCadastroDeCurriculo,
@@ -71,6 +72,8 @@ export interface Raio {
   comModalidade: number;
   porCidade: { cidade: string; n: number }[];
   porFonte: { fonte: string; n: number }[];
+  /** Ranking ponderado (salário, CLT, benefícios, contato) — ver destaques.ts. */
+  destaques: Destaque[];
   melhores: {
     title: string;
     company: string | null;
@@ -185,6 +188,7 @@ export function raioX(today: string): Raio {
       jobs.map((j) => j.source),
       "fonte",
     ) as unknown as Raio["porFonte"],
+    destaques: melhoresOportunidades(jobs, 5),
     melhores: comValor
       .sort((a, b) => b.valor - a.valor)
       .slice(0, 5)
@@ -281,6 +285,22 @@ export function formataRaioX(r: Raio, esc: (s: string) => string): string {
     linhas.push(
       `📍 *Cidades:* ${r.porCidade.map((c) => `${esc(c.cidade)} ${c.n}`).join(" · ")}`,
     );
+
+  if (r.destaques.length) {
+    linhas.push("", "⭐ *Melhores oportunidades hoje*");
+    for (const d of r.destaques) {
+      const url = linkSeguro(d.job.link);
+      const titulo = url ? `[${esc(d.job.title)}](${url})` : esc(d.job.title);
+      const meta = [
+        `*${brl(d.valor)}*`,
+        d.job.contract ? esc(d.job.contract) : null,
+        d.job.company ? esc(d.job.company) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      linhas.push(`• ${titulo} — ${meta}`);
+    }
+  }
 
   if (r.melhores.length) {
     linhas.push("", "*Maiores salários no radar hoje*");

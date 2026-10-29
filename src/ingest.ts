@@ -5,6 +5,7 @@ import { REGION_CITIES } from "./config/region.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
 import { syncAcif } from "./sources/acif.ts";
+import { syncEmpregoFranca } from "./sources/empregofranca.ts";
 import { syncEmpregos } from "./sources/empregos.ts";
 import { syncGupy, syncGupyRegiao } from "./sources/gupy.ts";
 import { syncInfoJobs } from "./sources/infojobs.ts";
@@ -84,6 +85,7 @@ export async function ingest(today: string): Promise<void> {
     ["infojobs", syncInfoJobs(today)],
     ["empregos.com.br", syncEmpregos(today)],
     ["acif", syncAcif(today)],
+    ["emprego-franca", syncEmpregoFranca(today)],
     ["gupy-regiao", syncGupyRegiao(today)],
     ["notícias", ingestNoticias()],
   ];
