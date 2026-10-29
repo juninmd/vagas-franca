@@ -36,6 +36,7 @@ Detalhes que custaram investigação e estão no código:
 - O `baseSalary` do JSON-LD do TrabalhaBrasil é **faixa estimada de mercado**, não o valor da vaga (estágio com bolsa de R$ 1.000 vinha como "R$ 1.910 a R$ 2.973") — por isso é ignorado; salário confiável só o do card ou o extraído do texto.
 - Rajada de requisições no TrabalhaBrasil derruba a fonte (captcha e depois 403): detalhe é buscado em série, poucos por rodada, e nunca duas vezes pra mesma vaga.
 - A paginação do empregos.com.br é por **caminho** (`/vagas/franca-sp/2`); o `?pagina=2` é ignorado. Depois da 2ª página a busca degrada para Franco da Rocha e São Paulo, que o filtro de região descarta — por isso a fonte rende ~30 vagas de Franca.
+- Mesma empresa + mesmo cargo em portais diferentes vale uma vaga só (`salvaVagas`, log `já vistas em outro portal`); dentro da mesma fonte nada é cortado, porque a Gupy publica uma vaga por loja. Só pega quando a fonte informa a empresa — Mural ACIF, Hard Franca e Franca Classificados não informam.
 - A paginação `?page=N` do InfoJobs devolve sempre a página 1; o que amplia a cobertura são os filtros da própria página, abertos em série com pausa.
 - A API da Gupy devolveu 404 no ambiente de teste de 29/10/2026 (`employability-portal.gupy.io` e `portal.api.gupy.io`); a API oficial (`api.gupy.io`) exige credencial. A fonte continua no código, mas não foi validada ao vivo.
 - A classificação por área usa **só o título**: a descrição da loja cita "produção" e jogava "Assistente de Beleza" em Calçados & Indústria.

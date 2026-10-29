@@ -154,6 +154,20 @@ const existsStmt = db.prepare<{ n: number }, [string]>(
   "SELECT COUNT(*) AS n FROM jobs WHERE id = ?",
 );
 
+/** Vagas com empresa identificada — base da deduplicação entre portais. */
+export function vagasComEmpresa(): {
+  id: string;
+  company: string;
+  title: string;
+  source: string;
+}[] {
+  return db
+    .query<{ id: string; company: string; title: string; source: string }, []>(
+      "SELECT id, company, title, source FROM jobs WHERE company IS NOT NULL",
+    )
+    .all();
+}
+
 /** Grava/atualiza a vaga. Devolve true se ela ainda não existia. */
 export function upsertJob(job: NewJob, id: string, today: string): boolean {
   const isNew = (existsStmt.get(id)?.n ?? 0) === 0;
