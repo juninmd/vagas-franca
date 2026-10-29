@@ -21,12 +21,13 @@ Google News (RSS)   ─┘        │
 | **Mural ACIF** (Assoc. Comercial e Industrial de Franca) | endpoints da SPA: `empregos-acif/carregar_vagas.php?pagina=N` + `detalhes_vaga.php?id=N` (JSON) | ~87 vagas de empresas da cidade, **com e-mail/telefone de contato** e requisitos (onde o horário aparece) |
 | **Gupy** (portal público) | API JSON `employability-portal.gupy.io` | ~130 vagas de Franca + ~32 das cidades vizinhas, empresa, contrato, modalidade, descrição |
 | **Emprego Franca** (empregofranca.com.br) | payload RSC do Next.js na página pública `/vagas` (20 vagas, 1 requisição) | salário exato/faixa em campo próprio, contrato, jornada, benefícios e WhatsApp/e-mail |
+| **Franca Classificados** | seção "Lista de Empregos" (~310 anúncios em texto livre); link por hash do texto, título = profissão no começo do anúncio | salário (só o rotulado "salário") e contato por regra |
 | **Emprego em Franca** (empregoemfranca.com) | home (~70 vagas) + detalhe por vaga, parse por rótulos (`Remuneração:`, `Benefícios:`, `Enviar currículo até`) | empresa, salário, benefícios, prazo e contato — só da seção de candidatura |
 | **BNE** | HTML SSR `?Page=N`; data confirmada no `JobPosting` do detalhe (só vaga publicada nos últimos 30 dias entra) | cargo, empresa, modalidade, descrição |
 | **Hard Franca** (hardfranca.com.br) | `anuncios.php` com ~160 anúncios inline; o id crescente do anúncio faz de relógio (janela de ~1 mês) | texto livre: salário e contato extraídos por regra; título já publicado por outra fonte é descartado |
 | **TrabalhaBrasil** | HTML + `JobPosting` (JSON-LD) na página de detalhe | vagas operacionais, salário do card, descrição completa |
-| **InfoJobs** | HTML da busca de Franca | salário e modalidade em campo próprio |
-| **empregos.com.br** | HTML (SSR) | descrição crua do anunciante — é onde aparecem salário e horário |
+| **InfoJobs** | HTML da busca de Franca + até 40 filtros públicos da própria página (`data-url`: contrato, categoria, antiguidade, home office) | salário e modalidade em campo próprio; ~140 vagas em vez de 20 |
+| **empregos.com.br** | HTML (SSR), páginas `/vagas/franca-sp/N` | descrição crua do anunciante — é onde aparecem salário e horário |
 | **Google News + Jornal da Franca** | RSS | notícias de emprego: "Emprega Franca", mutirões do PAT, feirões |
 
 Detalhes que custaram investigação e estão no código:
@@ -34,7 +35,9 @@ Detalhes que custaram investigação e estão no código:
 - `state=SP` na API da Gupy devolve **zero**; tem que ser `São Paulo` por extenso.
 - O `baseSalary` do JSON-LD do TrabalhaBrasil é **faixa estimada de mercado**, não o valor da vaga (estágio com bolsa de R$ 1.000 vinha como "R$ 1.910 a R$ 2.973") — por isso é ignorado; salário confiável só o do card ou o extraído do texto.
 - Rajada de requisições no TrabalhaBrasil derruba a fonte (captcha e depois 403): detalhe é buscado em série, poucos por rodada, e nunca duas vezes pra mesma vaga.
-- A paginação do empregos.com.br é client-side — `?pagina=2` devolve a mesma lista.
+- A paginação do empregos.com.br é por **caminho** (`/vagas/franca-sp/2`); o `?pagina=2` é ignorado. Depois da 2ª página a busca degrada para Franco da Rocha e São Paulo, que o filtro de região descarta — por isso a fonte rende ~30 vagas de Franca.
+- A paginação `?page=N` do InfoJobs devolve sempre a página 1; o que amplia a cobertura são os filtros da própria página, abertos em série com pausa.
+- A API da Gupy devolveu 404 no ambiente de teste de 29/10/2026 (`employability-portal.gupy.io` e `portal.api.gupy.io`); a API oficial (`api.gupy.io`) exige credencial. A fonte continua no código, mas não foi validada ao vivo.
 - A classificação por área usa **só o título**: a descrição da loja cita "produção" e jogava "Assistente de Beleza" em Calçados & Indústria.
 - A ordem em que as regras de área **casam** é separada da ordem em que as áreas **aparecem** no post. Amarradas, "Tutor de Fonoaudiologia" virava vaga de hospital só porque Saúde precisava aparecer antes de Educação.
 - Cada mensagem do digest é uma área: o Telegram corta em ~20 mensagens/minuto por grupo e **áreas inteiras sumiam do post** com 429 silencioso. Os envios são espaçados e o `retry_after` é respeitado.

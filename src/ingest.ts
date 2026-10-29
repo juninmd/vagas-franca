@@ -9,6 +9,7 @@ import { syncBne } from "./sources/bne.ts";
 import { syncEmpregoEmFranca } from "./sources/empregoemfranca.ts";
 import { syncEmpregoFranca } from "./sources/empregofranca.ts";
 import { syncEmpregos } from "./sources/empregos.ts";
+import { syncFrancaClassificados } from "./sources/francaclassificados.ts";
 import { syncGupy, syncGupyRegiao } from "./sources/gupy.ts";
 import { syncHardFranca } from "./sources/hardfranca.ts";
 import { syncInfoJobs } from "./sources/infojobs.ts";
@@ -90,6 +91,7 @@ export async function ingest(today: string): Promise<void> {
     ["acif", syncAcif(today)],
     ["emprego-franca", syncEmpregoFranca(today)],
     ["bne", syncBne(today)],
+    ["francaclassificados", syncFrancaClassificados(today)],
     ["empregoemfranca", syncEmpregoEmFranca(today)],
     ["gupy-regiao", syncGupyRegiao(today)],
     ["notícias", ingestNoticias()],

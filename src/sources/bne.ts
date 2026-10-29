@@ -98,7 +98,7 @@ export async function syncBne(today: string): Promise<void> {
   const conhecidas = vagas.filter((v) => jaTem.has(hash(v.link)));
   const pendentes = vagas
     .filter((v) => !jaTem.has(hash(v.link)))
-    .slice(0, env.detailPages * 2);
+    .slice(0, env.detailPages * 5);
   const detalhadas = await pool(
     pendentes,
     1,

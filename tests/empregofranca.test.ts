@@ -11,7 +11,12 @@ import {
   mapeiaVagasEF,
   salarioEF,
 } from "../src/sources/empregofranca.ts";
+import {
+  parseFrancaClassificados,
+  tituloDe,
+} from "../src/sources/francaclassificados.ts";
 import { parseHardFranca } from "../src/sources/hardfranca.ts";
+import { filtrosDaPagina } from "../src/sources/infojobs.ts";
 
 const vaga = (extra: Record<string, unknown> = {}) => ({
   title: "OPERADOR DE CAIXA",
@@ -201,5 +206,72 @@ describe("hardfranca", () => {
   test("valor solto fora da faixa não vira salário", () => {
     const r = parseHardFranca(bloco(1, "A", "VT R$ 25,00 por dia"));
     expect(r[0]?.salary).toBeNull();
+  });
+});
+
+describe("francaclassificados", () => {
+  test.each([
+    ["PRECISA-SE DE COLADEIRA DE PEÇAS – 16 98865-1306.", "Coladeira de Peças"],
+    ["PRECISA-SE DE AUX DE MONTAGEM, SEXO FEMININO", "Auxiliar de Montagem"],
+    [
+      "Loterica X / Centro Contrata-se Funcionária para casa lotérica",
+      "Funcionária",
+    ],
+    [
+      "Estamos contratando profissional de vendas. Enviar currículo",
+      "Profissional de Vendas",
+    ],
+    [
+      "SERVENTE DE PEDREIRO – COM REGISTRO 📍 LOCAL: Franca",
+      "Servente de Pedreiro",
+    ],
+  ])("título de %s", (texto, esperado) => {
+    expect(tituloDe(texto)).toBe(esperado);
+  });
+
+  const pagina = (...ps: string[]) =>
+    `<section id="empregos">${ps.map((p) => `<p class="vagas text-left">${p}</p>`).join("")}</section>
+     <section id="concursos"><p class="vagas">PRECISA-SE DE FORA DA SEÇÃO DE EMPREGOS</p>`;
+
+  test("lê só a seção de empregos, uma vez por texto repetido", () => {
+    const r = parseFrancaClassificados(
+      pagina(
+        "PRECISA-SE DE CAIXA COM EXPERIÊNCIA. WHATSAPP 16 99999-1111",
+        "PRECISA-SE DE CAIXA COM EXPERIÊNCIA. WHATSAPP 16 99999-1111",
+        "PRECISA-SE DE MOTORISTA. Salário R$ 2.500,00 enviar para rh@x.com.br",
+      ),
+    );
+    expect(r.map((v) => v.title)).toEqual(["Caixa", "Motorista"]);
+    expect(r[1]?.salary).toBe("R$ 2.500");
+    expect(r[1]?.contact).toBe("rh@x.com.br");
+    expect(r[0]?.link).toMatch(/#emprego-[0-9a-f]{12}$/);
+  });
+
+  test("quem procura emprego não é vaga; salário sem rótulo não conta", () => {
+    const r = parseFrancaClassificados(
+      pagina(
+        "Procuro emprego como auxiliar de limpeza, tenho experiência",
+        "PRECISA-SE DE VENDEDORA. Comissão de R$ 3.000,00 por mês",
+      ),
+    );
+    expect(r).toHaveLength(1);
+    expect(r[0]?.salary).toBeNull();
+  });
+
+  test("página sem a seção de empregos devolve []", () => {
+    expect(parseFrancaClassificados("<html></html>")).toEqual([]);
+  });
+});
+
+describe("infojobs filtros", () => {
+  test("coleta data-url únicos de empregos-*", () => {
+    const h = `<a data-url="empregos-em-franca,-sp.aspx?def1=1"></a>
+      <a data-url="empregos-em-franca,-sp.aspx?def1=1"></a>
+      <a data-url="empregos-de-transportes-em-franca,-sp.aspx"></a>
+      <a data-url="/outra/coisa"></a>`;
+    expect(filtrosDaPagina(h)).toEqual([
+      "empregos-em-franca,-sp.aspx?def1=1",
+      "empregos-de-transportes-em-franca,-sp.aspx",
+    ]);
   });
 });

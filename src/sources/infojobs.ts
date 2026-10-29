@@ -1,4 +1,3 @@
-import { env } from "../config/env.ts";
 import {
   fetchHtml,
   limpa,
@@ -62,17 +61,46 @@ function parsePagina(html: string) {
     });
 }
 
+/**
+ * A paginação `?page=N` do InfoJobs devolve sempre a página 1, então a lista
+ * pública só dá 20 vagas. Os filtros da própria página (contrato, categoria,
+ * antiguidade, home office…) são links públicos `data-url` e cada um mostra um
+ * recorte diferente: a união deles cobre bem mais que a página crua. Os filtros
+ * são abertos em série e com pausa, com teto por rodada.
+ */
+const MAX_FILTROS = 40;
+const PAUSA_FILTRO_MS = 700;
+
+export const filtrosDaPagina = (html: string): string[] => [
+  ...new Set(
+    [...html.matchAll(/data-url="(empregos-[^"]+\.aspx(?:\?[^"]*)?)"/g)].map(
+      (m) => m[1] as string,
+    ),
+  ),
+];
+
 export async function syncInfoJobs(today: string): Promise<void> {
-  const vagas = [];
+  const vagas: ReturnType<typeof parsePagina> = [];
   const vistos = new Set<string>();
-  for (let pagina = 1; pagina <= env.pagesPerBoard; pagina++) {
-    const url = pagina === 1 ? LISTA : `${LISTA}?page=${pagina}`;
-    const lote = parsePagina(await fetchHtml(url));
-    const novos = lote.filter((v) => !vistos.has(v.link));
-    // Página que repete a anterior significa que a paginação foi ignorada.
-    if (!novos.length) break;
-    for (const v of novos) vistos.add(v.link);
-    vagas.push(...novos);
+  const junta = (html: string) => {
+    for (const v of parsePagina(html))
+      if (!vistos.has(v.link)) {
+        vistos.add(v.link);
+        vagas.push(v);
+      }
+  };
+
+  const primeira = await fetchHtml(LISTA);
+  junta(primeira);
+  for (const url of filtrosDaPagina(primeira)
+    .filter((u) => u !== "empregos-em-franca,-sp.aspx")
+    .slice(0, MAX_FILTROS)) {
+    try {
+      await Bun.sleep(PAUSA_FILTRO_MS);
+      junta(await fetchHtml(`${BASE}/${url}`));
+    } catch {
+      // um filtro que falha não derruba a fonte
+    }
   }
   logFonte("infojobs", salvaVagas(vagas, today));
 }

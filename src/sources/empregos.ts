@@ -1,3 +1,4 @@
+import { env } from "../config/env.ts";
 import {
   fetchHtml,
   limpa,
@@ -10,8 +11,8 @@ import {
  * empregos.com.br renderiza os cards no servidor (Nuxt SSR) — dá pra ler sem
  * navegador. É a fonte mais rica em salário e horário: os anunciantes colam a
  * descrição inteira ("SALÁRIO R$ 1.900 ... HORÁRIO: SEGUNDA A SEXTA 07:00").
- * A paginação é client-side (`?pagina=2` devolve a mesma lista), então é só
- * a primeira página — ~20 vagas, sempre as mais recentes.
+ * A paginação é por caminho (`/vagas/franca-sp/2`, 20 vagas por página, sem
+ * repetição); o query `?pagina=2` é ignorado e devolve a primeira página.
  */
 const LISTA = "https://www.empregos.com.br/vagas/franca-sp";
 
@@ -20,11 +21,9 @@ const pega = (card: string, re: RegExp): string | null => {
   return m?.[1] ? limpa(m[1]) : null;
 };
 
-export async function syncEmpregos(today: string): Promise<void> {
-  const html = await fetchHtml(LISTA);
+function parsePagina(html: string) {
   const cards = html.split(/<div id="job-card"/).slice(1);
-
-  const vagas = cards.flatMap((card) => {
+  return cards.flatMap((card) => {
     const title =
       pega(
         card,
@@ -56,6 +55,20 @@ export async function syncEmpregos(today: string): Promise<void> {
       },
     ];
   });
+}
 
+export async function syncEmpregos(today: string): Promise<void> {
+  const vagas: ReturnType<typeof parsePagina> = [];
+  const vistos = new Set<string>();
+  for (let pagina = 1; pagina <= env.pagesPerBoard; pagina++) {
+    const lote = parsePagina(
+      await fetchHtml(pagina === 1 ? LISTA : `${LISTA}/${pagina}`),
+    );
+    const novos = lote.filter((v) => !vistos.has(v.link));
+    // Página que só repete a anterior significa que a paginação acabou.
+    if (!novos.length) break;
+    for (const v of novos) vistos.add(v.link);
+    vagas.push(...novos);
+  }
   logFonte("empregos.com.br", salvaVagas(vagas, today));
 }
