@@ -1,4 +1,4 @@
-import { parseSalario } from "./format.ts";
+import { extraiRequisitos, parseSalario } from "./format.ts";
 
 /**
  * O smoke GRAVA vagas no banco. `db.ts` abre o banco no import, então o guard
@@ -83,6 +83,28 @@ console.table(
     score: d.score,
     fonte: d.job.source,
   })),
+);
+
+const porSalario = jobs
+  .map((j) => ({ j, valor: parseSalario(j.salary) }))
+  .filter((x): x is { j: Job; valor: number } => x.valor !== null)
+  .sort((a, b) => b.valor - a.valor);
+console.log(
+  `\n=== LISTA ORDENADA POR SALÁRIO (top 25 de ${porSalario.length} com salário) ===`,
+);
+console.table(
+  porSalario.slice(0, 25).map((x, i) => ({
+    "#": i + 1,
+    R$: x.valor,
+    vaga: x.j.title.slice(0, 34),
+    empresa: (x.j.company ?? "—").slice(0, 22),
+    contrato: x.j.contract ?? "—",
+    requisitos: (extraiRequisitos(x.j.description) ?? "—").slice(0, 38),
+    fonte: x.j.source,
+  })),
+);
+console.log(
+  `\ncontrato informado/inferido: ${jobs.filter((j) => j.contract).length}/${jobs.length} · requisitos extraídos: ${jobs.filter((j) => extraiRequisitos(j.description)).length}/${jobs.length}`,
 );
 
 if (!jobs.length) falhas.push("banco vazio");

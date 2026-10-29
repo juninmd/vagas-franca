@@ -278,3 +278,82 @@ export function prazo(deadline: string | null, hoje: string): string | null {
   if (dias === 0) return "encerra hoje";
   return dias === 1 ? "encerra amanhã" : `encerra em ${dias} dias`;
 }
+
+const VALOR = String.raw`(\d{1,3}(?:\.\d{3})+(?:,\d{2})?|\d{3,6}(?:,\d{2})?)`;
+const ROTULO_SALARIO =
+  "(?:sal[áa]rio|remunera[çc][ãa]o|pagamento|ganhos?|piso)";
+/** "Salário R$ 2.000", "salário: 2.000,00", "remuneração de R$2.000". */
+const SALARIO_DEPOIS = new RegExp(
+  `${ROTULO_SALARIO}\\b(?:(?!R\\$)[^\\d\\n]){0,30}(?:R\\$\\s*)?${VALOR}`,
+  "gi",
+);
+/** "R$ 2.338,79 de salário", "R$ 2.000 fixo". */
+const SALARIO_ANTES = new RegExp(
+  `R\\$\\s*${VALOR}\\s*(?:de |\\/ ?|por m[êe]s )?(?:sal[áa]rio|fixo)`,
+  "gi",
+);
+
+/**
+ * Salário que o próprio texto rotula como salário/remuneração/pagamento/piso,
+ * no formato canônico "R$ 2.000". Valor solto (VT, VR, comissão, preço) não
+ * conta — é o que separava salário de benefício nos anúncios de texto livre. A
+ * faixa 800–30.000 é a mesma de `parseSalario`; em faixa "A - B" fica o piso.
+ */
+export function extraiSalarioRotulado(texto: string | null): string | null {
+  if (!texto) return null;
+  const t = texto.slice(0, 3000);
+  for (const re of [SALARIO_DEPOIS, SALARIO_ANTES]) {
+    re.lastIndex = 0;
+    for (const m of t.matchAll(re)) {
+      const valor = parseSalario(`R$ ${m[1]}`);
+      if (valor)
+        return `R$ ${valor.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Tipo de contrato quando a fonte não o informa mas o texto diz. A ordem
+ * importa: "estágio" e "aprendiz" ganham de "registrado" (aprendiz também tem
+ * carteira), e "sem registro" nunca vira CLT.
+ */
+export function inferirContrato(texto: string | null): string | null {
+  if (!texto) return null;
+  const t = texto.slice(0, 3000);
+  if (/est[áa]gio|estagi[áa]ri/i.test(t)) return "Estágio";
+  if (/jovem aprendiz|menor aprendiz|\baprendiz\b/i.test(t))
+    return "Jovem Aprendiz";
+  if (/\bPJ\b|pessoa jur[íi]dica/.test(t)) return "PJ";
+  if (/tempor[áa]ri|extra natal|safrista/i.test(t)) return "Temporário";
+  if (/free ?lance|freelancer|aut[ôo]nomo/i.test(t)) return "Autônomo";
+  if (/\bsem (registro|carteira)\b/i.test(t)) return null;
+  if (
+    /\bCLT\b|carteira (assinada|registrada)|registro em carteira|trabalho registrado|\bregistrad[oa]\b|efetivo/i.test(
+      t,
+    )
+  )
+    return "CLT";
+  return null;
+}
+
+/**
+ * "Requisitos da vaga" a partir do texto da descrição: o trecho depois do rótulo
+ * "Requisitos"/"Requisitos e qualificações"/"Pré-requisitos" até o próximo
+ * rótulo conhecido, em uma linha de até 160 caracteres. Sem rótulo, sem
+ * requisito — nada é inventado.
+ */
+export function extraiRequisitos(texto: string | null): string | null {
+  if (!texto) return null;
+  const m = texto
+    .slice(0, 3000)
+    .match(
+      /(?:pr[ée]-)?requisitos?(?:\s+e\s+qualifica[çc][õo]es|\s+da\s+vaga|\s+necess[áa]rios)?\s*[:\-–]\s*([\s\S]+?)(?=\s(?:benef[íi]cios?|atividades|responsabilidades|como se candidatar|sal[áa]rio|hor[áa]rio|diferenciais|oferecemos|enviar|interessados|remunera[çc][ãa]o)\b\s*[:\-–]|$)/i,
+    );
+  const limpo = (m?.[1] ?? "")
+    .replace(/\s+/g, " ")
+    .replace(/[;,.\s]+$/, "")
+    .trim();
+  if (limpo.length < 4) return null;
+  return limpo.length > 160 ? `${[...limpo].slice(0, 157).join("")}…` : limpo;
+}

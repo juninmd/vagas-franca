@@ -1,6 +1,10 @@
 import { norm } from "../config/region.ts";
 import { db, type NewJob } from "../db.ts";
-import { contatoSeguro, parseSalario } from "../format.ts";
+import {
+  contatoSeguro,
+  extraiSalarioRotulado,
+  inferirContrato,
+} from "../format.ts";
 import { fetchHtml, limpa, logFonte, salvaVagas } from "./comum.ts";
 
 type Vaga = Omit<NewJob, "area">;
@@ -31,16 +35,13 @@ export function parseHardFranca(html: string): (Vaga & { id: number })[] {
     const title = limpa(m[2] as string);
     const texto = limpa(m[3] as string);
     if (!title || !texto) continue;
-    const valor = parseSalario(
-      texto.match(/R\$\s?\d[\d.]*(?:,\d{2})?/)?.[0] ?? null,
-    );
     out.push({
       id,
       title: title.slice(0, 120),
       company: null,
-      salary: valor ? `R$ ${valor.toLocaleString("pt-BR")}` : null,
+      salary: extraiSalarioRotulado(texto),
       schedule: null,
-      contract: null,
+      contract: inferirContrato(`${title} ${texto}`),
       workplace: "Presencial",
       city: "Franca",
       link: `${URL}#anuncio-${id}`,

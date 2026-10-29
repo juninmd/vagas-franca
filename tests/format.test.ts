@@ -4,7 +4,10 @@ import {
   contatoSeguro,
   ehCadastroDeCurriculo,
   ehPcd,
+  extraiRequisitos,
+  extraiSalarioRotulado,
   formataSalario,
+  inferirContrato,
   limpaTitulo,
   linkSeguro,
   mdSafe,
@@ -303,5 +306,78 @@ describe("contatoSeguro", () => {
     const t0 = Date.now();
     contatoSeguro("a".repeat(160_000));
     expect(Date.now() - t0).toBeLessThan(1000);
+  });
+});
+
+describe("extraiSalarioRotulado", () => {
+  test.each([
+    ["Salário R$2.031 + Premiação", "R$ 2.031"],
+    ["salário: 2.000,00 3 - registrada", "R$ 2.000"],
+    ["Benefícios: Salário R$ 4.000,00, vale", "R$ 4.000"],
+    ["R$ 2.338,79 de salário", "R$ 2.339"],
+    [
+      "Pagamento: podendo variar de R$2.418,00 - R$5.046,11 por mês",
+      "R$ 2.418",
+    ],
+    ["Remuneração de R$ 1.837,40 VA R$ 151", "R$ 1.837"],
+  ])("%s → %s", (texto, esperado) => {
+    expect(extraiSalarioRotulado(texto)).toBe(esperado);
+  });
+
+  test.each([
+    "VT R$ 300 VR R$ 1.000",
+    "Comissão de R$ 3.000,00 por mês",
+    "Salário/ Comissão tratar 16 99988-9999",
+    "salário acima do mercado",
+    "Salário R$ 25,00 por dia",
+    null,
+  ])("%s → null (valor solto ou fora da faixa não é salário)", (texto) => {
+    expect(extraiSalarioRotulado(texto as string | null)).toBeNull();
+  });
+});
+
+describe("inferirContrato", () => {
+  test.each([
+    ["Vaga CLT, início imediato", "CLT"],
+    ["trabalho registrado em carteira", "CLT"],
+    ["Estágio em administração", "Estágio"],
+    ["Jovem aprendiz de 14 a 24 anos", "Jovem Aprendiz"],
+    ["Contratação PJ", "PJ"],
+    ["Extra Natal temporário", "Temporário"],
+    ["trabalho como autônomo", "Autônomo"],
+    // aprendiz também tem carteira, mas o rótulo certo é o dele.
+    ["Aprendiz com carteira assinada", "Jovem Aprendiz"],
+  ])("%s → %s", (texto, esperado) => {
+    expect(inferirContrato(texto)).toBe(esperado);
+  });
+
+  test("sem registro nunca vira CLT; texto vazio é null", () => {
+    expect(inferirContrato("diária, sem registro")).toBeNull();
+    expect(inferirContrato(null)).toBeNull();
+    expect(inferirContrato("Vendedor com experiência")).toBeNull();
+  });
+});
+
+describe("extraiRequisitos", () => {
+  test("pega o trecho até o próximo rótulo", () => {
+    expect(
+      extraiRequisitos(
+        "Atendimento ao cliente. Requisitos: Boa comunicação; experiência com caixa. Benefícios: VT",
+      ),
+    ).toBe("Boa comunicação; experiência com caixa");
+  });
+
+  test("aceita 'Requisitos e qualificações' e traço", () => {
+    expect(
+      extraiRequisitos("Requisitos e qualificações - Ensino médio completo"),
+    ).toBe("Ensino médio completo");
+  });
+
+  test("sem rótulo não inventa; trecho enorme é cortado", () => {
+    expect(extraiRequisitos("Vendedor com experiência")).toBeNull();
+    expect(extraiRequisitos(null)).toBeNull();
+    const longo = extraiRequisitos(`Requisitos: ${"a".repeat(400)}`);
+    expect(longo?.length).toBeLessThanOrEqual(160);
+    expect(longo?.endsWith("…")).toBe(true);
   });
 });

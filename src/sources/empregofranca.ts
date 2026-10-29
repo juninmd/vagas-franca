@@ -141,7 +141,13 @@ export function mapeiaVagasEF(
       source: "Emprego Franca",
       description:
         limpa(
-          [v.description, v.requirements, beneficios].filter(Boolean).join(" "),
+          [
+            v.description,
+            v.requirements && `Requisitos: ${v.requirements}.`,
+            beneficios,
+          ]
+            .filter(Boolean)
+            .join(" "),
         ).slice(0, 1500) || null,
       published: v.publishedAt ?? null,
       contact:

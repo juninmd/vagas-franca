@@ -15,6 +15,7 @@ import {
 import { enrich } from "./enrich.ts";
 import {
   contatoSeguro,
+  extraiRequisitos,
   formataSalario,
   linkSeguro,
   mdSafe,
@@ -91,6 +92,10 @@ function jobLines(job: Job, today: string): string {
     job.city ? mdSafe(job.city) : null,
   ].filter(Boolean);
   if (ficha.length) linhas.push(`  ${ficha.join(" · ")}`);
+
+  // Requisitos só aparecem quando a descrição os rotula — nada é inventado.
+  const requisitos = extraiRequisitos(job.description);
+  if (requisitos) linhas.push(`  ✅ _${mdSafe(requisitos)}_`);
 
   // Prazo curto é a informação que muda o comportamento de quem lê hoje.
   const limite = prazo(job.deadline, today);

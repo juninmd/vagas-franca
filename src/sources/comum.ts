@@ -3,7 +3,13 @@ import { classify } from "../config/areas.ts";
 import { env } from "../config/env.ts";
 import { inRegion, norm } from "../config/region.ts";
 import { type NewJob, upsertJob, vagasComEmpresa } from "../db.ts";
-import { ehCadastroDeCurriculo, ehPcd, limpaTitulo } from "../format.ts";
+import {
+  ehCadastroDeCurriculo,
+  ehPcd,
+  extraiSalarioRotulado,
+  inferirContrato,
+  limpaTitulo,
+} from "../format.ts";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -165,7 +171,12 @@ export function salvaVagas(
       city,
       contact: vazioNull(v.contact ?? null),
       company: vazioNull(v.company),
-      contract: vazioNull(v.contract),
+      // Quando a fonte não informa, o texto às vezes diz (salário rotulado, CLT,
+      // estágio) — só regra fechada, nunca IA, e a fonte sempre ganha.
+      salary: v.salary ?? extraiSalarioRotulado(v.description),
+      contract:
+        vazioNull(v.contract) ??
+        inferirContrato(`${title} ${v.description ?? ""}`),
       workplace: vazioNull(v.workplace),
       description: vazioNull(v.description),
     };

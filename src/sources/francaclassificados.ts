@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import type { NewJob } from "../db.ts";
-import { contatoSeguro, parseSalario } from "../format.ts";
+import {
+  contatoSeguro,
+  extraiSalarioRotulado,
+  inferirContrato,
+} from "../format.ts";
 import { fetchHtml, limpa, logFonte, salvaVagas } from "./comum.ts";
 
 type Vaga = Omit<NewJob, "area">;
@@ -65,6 +69,18 @@ export function tituloDe(texto: string): string {
     .replace(/\s+\d+$/, "")
     .trim()
     .slice(0, 60);
+  // "Pessoa", "Funcionária" sozinhos não dizem a vaga: junta o complemento
+  // ("para trabalhar em granja de suínos" → "Pessoa – Granja de Suínos").
+  if (
+    /^(?:funcion[áa]ri[oa]s?|pessoas?|profissional|colaborador\w*|candidat\w+)$/i.test(
+      t,
+    )
+  ) {
+    const alvo = bruto.match(
+      /para\s+(?:trabalhar\s+|atuar\s+)?(?:como|de|em|na|no|nas|nos)\s+([^.,–—(📍\n]{3,40})/iu,
+    )?.[1];
+    if (alvo) return `${titleCase(t)} – ${titleCase(alvo.trim())}`;
+  }
   return titleCase(t || texto.slice(0, 60));
 }
 
@@ -86,16 +102,12 @@ export function parseFrancaClassificados(html: string): Vaga[] {
       .slice(0, 12);
     if (vistos.has(id)) continue;
     vistos.add(id);
-    const salario = texto.match(
-      /sal[áa]rio[^R\d]{0,15}R?\$?\s*(\d[\d.]*,\d{2}|\d[\d.]{3,})/i,
-    )?.[1];
-    const valor = salario ? parseSalario(`R$ ${salario}`) : null;
     out.push({
       title: tituloDe(texto),
       company: null,
-      salary: valor ? `R$ ${valor.toLocaleString("pt-BR")}` : null,
+      salary: extraiSalarioRotulado(texto),
       schedule: null,
-      contract: null,
+      contract: inferirContrato(texto),
       workplace: "Presencial",
       city: "Franca",
       link: `${URL}#emprego-${id}`,
