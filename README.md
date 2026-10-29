@@ -38,6 +38,8 @@ Detalhes que custaram investigação e estão no código:
 - Rajada de requisições no TrabalhaBrasil derruba a fonte (captcha e depois 403): detalhe é buscado em série, poucos por rodada, e nunca duas vezes pra mesma vaga.
 - A paginação do empregos.com.br é por **caminho** (`/vagas/franca-sp/2`); o `?pagina=2` é ignorado. Depois da 2ª página a busca degrada para Franco da Rocha e São Paulo, que o filtro de região descarta — por isso a fonte rende ~30 vagas de Franca.
 - Mesma empresa + mesmo cargo em portais diferentes vale uma vaga só (`salvaVagas`, log `já vistas em outro portal`); dentro da mesma fonte nada é cortado, porque a Gupy publica uma vaga por loja. Só pega quando a fonte informa a empresa — Mural ACIF, Hard Franca e Franca Classificados não informam.
+- O BNE responde 403 depois de algumas dezenas de detalhes seguidos: a rodada para no primeiro 403/429 (orçamento = `DETAIL_PAGES × 3`), e a vaga descartada por idade fica na tabela `ignoradas` por uma semana, para a próxima rodada não reabrir as mesmas. As páginas mais fundas da listagem são antigas (jan/2026 na página 6), então não há vaga recente "escondida" nelas.
+- A listagem do TrabalhaBrasil vai a ~400 páginas, mas **não é ordenada por data** (item da página 1 de abr/2026, da 30 de jan/2026, da 400 de jul/2024); por isso o padrão fica em poucas páginas.
 - A paginação `?page=N` do InfoJobs devolve sempre a página 1; o que amplia a cobertura são os filtros da própria página, abertos em série com pausa.
 - A API da Gupy devolveu 404 no ambiente de teste de 29/10/2026 (`employability-portal.gupy.io` e `portal.api.gupy.io`); a API oficial (`api.gupy.io`) exige credencial. A fonte continua no código, mas não foi validada ao vivo.
 - A classificação por área usa **só o título**: a descrição da loja cita "produção" e jogava "Assistente de Beleza" em Calçados & Indústria.
@@ -117,6 +119,7 @@ Sem `TELEGRAM_BOT_TOKEN` o digest é impresso no console — dá pra revisar o p
 | `JOBS_PER_DIGEST` | `60` | teto de vagas por post — o resto sai nos dias seguintes |
 | `ENRICH_MAX_JOBS` | `120` | teto de vagas mandadas à IA por rodada |
 | `PAGES_PER_BOARD` | `5` | páginas varridas por portal HTML |
+| `INFOJOBS_FILTROS` | `120` | filtros públicos do InfoJobs abertos por rodada (a página expõe ~90; com 40 saíam 138 vagas, com todos 188) |
 | `DETAIL_PAGES` | `12` | páginas de detalhe abertas por rodada (educação com o portal) |
 | `JOB_TTL_DAYS` | `21` | vaga não revista há tanto tempo é considerada encerrada |
 | `TELEGRAM_INTERVAL_MS` | `3500` | espaçamento entre mensagens (o Telegram corta em ~20/min por grupo) |

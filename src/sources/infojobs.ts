@@ -1,3 +1,4 @@
+import { env } from "../config/env.ts";
 import {
   fetchHtml,
   limpa,
@@ -68,7 +69,6 @@ function parsePagina(html: string) {
  * recorte diferente: a união deles cobre bem mais que a página crua. Os filtros
  * são abertos em série e com pausa, com teto por rodada.
  */
-const MAX_FILTROS = 40;
 const PAUSA_FILTRO_MS = 700;
 
 export const filtrosDaPagina = (html: string): string[] => [
@@ -94,7 +94,7 @@ export async function syncInfoJobs(today: string): Promise<void> {
   junta(primeira);
   for (const url of filtrosDaPagina(primeira)
     .filter((u) => u !== "empregos-em-franca,-sp.aspx")
-    .slice(0, MAX_FILTROS)) {
+    .slice(0, env.infojobsFiltros)) {
     try {
       await Bun.sleep(PAUSA_FILTRO_MS);
       junta(await fetchHtml(`${BASE}/${url}`));
