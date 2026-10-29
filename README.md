@@ -21,6 +21,9 @@ Google News (RSS)   ─┘        │
 | **Mural ACIF** (Assoc. Comercial e Industrial de Franca) | endpoints da SPA: `empregos-acif/carregar_vagas.php?pagina=N` + `detalhes_vaga.php?id=N` (JSON) | ~87 vagas de empresas da cidade, **com e-mail/telefone de contato** e requisitos (onde o horário aparece) |
 | **Gupy** (portal público) | API JSON `employability-portal.gupy.io` | ~130 vagas de Franca + ~32 das cidades vizinhas, empresa, contrato, modalidade, descrição |
 | **Emprego Franca** (empregofranca.com.br) | payload RSC do Next.js na página pública `/vagas` (20 vagas, 1 requisição) | salário exato/faixa em campo próprio, contrato, jornada, benefícios e WhatsApp/e-mail |
+| **Emprego em Franca** (empregoemfranca.com) | home (~70 vagas) + detalhe por vaga, parse por rótulos (`Remuneração:`, `Benefícios:`, `Enviar currículo até`) | empresa, salário, benefícios, prazo e contato — só da seção de candidatura |
+| **BNE** | HTML SSR `?Page=N`; data confirmada no `JobPosting` do detalhe (só vaga publicada nos últimos 30 dias entra) | cargo, empresa, modalidade, descrição |
+| **Hard Franca** (hardfranca.com.br) | `anuncios.php` com ~160 anúncios inline; o id crescente do anúncio faz de relógio (janela de ~1 mês) | texto livre: salário e contato extraídos por regra; título já publicado por outra fonte é descartado |
 | **TrabalhaBrasil** | HTML + `JobPosting` (JSON-LD) na página de detalhe | vagas operacionais, salário do card, descrição completa |
 | **InfoJobs** | HTML da busca de Franca | salário e modalidade em campo próprio |
 | **empregos.com.br** | HTML (SSR) | descrição crua do anunciante — é onde aparecem salário e horário |
@@ -108,7 +111,7 @@ Sem `TELEGRAM_BOT_TOKEN` o digest é impresso no console — dá pra revisar o p
 | `CRON_DIGEST` | `0 11 * * *` | post diário 8h BRT |
 | `JOBS_PER_DIGEST` | `60` | teto de vagas por post — o resto sai nos dias seguintes |
 | `ENRICH_MAX_JOBS` | `120` | teto de vagas mandadas à IA por rodada |
-| `PAGES_PER_BOARD` | `3` | páginas varridas por portal HTML |
+| `PAGES_PER_BOARD` | `5` | páginas varridas por portal HTML |
 | `DETAIL_PAGES` | `12` | páginas de detalhe abertas por rodada (educação com o portal) |
 | `JOB_TTL_DAYS` | `21` | vaga não revista há tanto tempo é considerada encerrada |
 | `TELEGRAM_INTERVAL_MS` | `3500` | espaçamento entre mensagens (o Telegram corta em ~20/min por grupo) |

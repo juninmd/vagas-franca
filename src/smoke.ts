@@ -16,6 +16,9 @@ const { melhoresOportunidades } = await import("./destaques.ts");
 const { db } = await import("./db.ts");
 const { isoDay } = await import("./digest.ts");
 const { syncEmpregoFranca } = await import("./sources/empregofranca.ts");
+const { syncBne } = await import("./sources/bne.ts");
+const { syncEmpregoEmFranca } = await import("./sources/empregoemfranca.ts");
+const { syncHardFranca } = await import("./sources/hardfranca.ts");
 const { syncAcif } = await import("./sources/acif.ts");
 const { syncTrabalhaBrasil } = await import("./sources/trabalhabrasil.ts");
 const { syncInfoJobs } = await import("./sources/infojobs.ts");
@@ -33,10 +36,13 @@ const falhas: string[] = [];
 
 const fontes: [string, () => Promise<unknown>][] = [
   ["emprego-franca", () => syncEmpregoFranca(hoje)],
+  ["bne", () => syncBne(hoje)],
+  ["empregoemfranca", () => syncEmpregoEmFranca(hoje)],
   ["acif", () => syncAcif(hoje)],
   ["trabalhabrasil", () => syncTrabalhaBrasil(hoje)],
   ["infojobs", () => syncInfoJobs(hoje)],
   ["empregos.com.br", () => syncEmpregos(hoje)],
+  ["hardfranca", () => syncHardFranca(hoje)],
 ];
 for (const [nome, run] of fontes) {
   try {
