@@ -13,6 +13,7 @@ import { syncFrancaClassificados } from "./sources/francaclassificados.ts";
 import { syncGupy, syncGupyRegiao } from "./sources/gupy.ts";
 import { syncHardFranca } from "./sources/hardfranca.ts";
 import { syncInfoJobs } from "./sources/infojobs.ts";
+import { syncMelhoresEmpregos } from "./sources/melhoresempregos.ts";
 import { syncTrabalhaBrasil } from "./sources/trabalhabrasil.ts";
 
 const parser = new Parser({ timeout: env.feedTimeoutMs });
@@ -91,6 +92,7 @@ export async function ingest(today: string): Promise<void> {
     ["acif", syncAcif(today)],
     ["emprego-franca", syncEmpregoFranca(today)],
     ["bne", syncBne(today)],
+    ["melhoresempregos", syncMelhoresEmpregos(today)],
     ["francaclassificados", syncFrancaClassificados(today)],
     ["empregoemfranca", syncEmpregoEmFranca(today)],
     ["gupy-regiao", syncGupyRegiao(today)],

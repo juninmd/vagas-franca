@@ -17,6 +17,7 @@ import {
 } from "../src/sources/francaclassificados.ts";
 import { parseHardFranca } from "../src/sources/hardfranca.ts";
 import { filtrosDaPagina } from "../src/sources/infojobs.ts";
+import { parsePaginaMelhoresEmpregos } from "../src/sources/melhoresempregos.ts";
 
 const vaga = (extra: Record<string, unknown> = {}) => ({
   title: "OPERADOR DE CAIXA",
@@ -273,5 +274,34 @@ describe("infojobs filtros", () => {
       "empregos-em-franca,-sp.aspx?def1=1",
       "empregos-de-transportes-em-franca,-sp.aspx",
     ]);
+  });
+});
+
+describe("melhoresempregos", () => {
+  const card = (data: string, empresa = "Loja X") =>
+    `<div class="list-item" itemscope itemtype="http://schema.org/JobPosting" ><h3 class="list-item-title" itemprop="title"><a title="t" href="/vaga/vendedor/franca-sp/1/"> Vendedor | FRANCA </a></h3><a class="list-item-tag item-badge job-type-clt" href="/clt/">CLT</a><a class="list-item-tag item-badge job-type-presencial">Presencial</a><span itemprop="hiringOrganization"><div itemprop="name"> ${empresa} </div></span><span itemprop="addressLocality">Franca</span><time itemprop="datePosted" datetime="${data}">x</time><meta itemprop="description" content="Vaga para Vendedor em Franca." /></div>`;
+
+  test("lê título, empresa, contrato, modalidade e data", () => {
+    const [v] = parsePaginaMelhoresEmpregos(card("2026-10-29"), "2026-10-29");
+    expect(v?.title).toBe("Vendedor | FRANCA");
+    expect(v?.company).toBe("Loja X");
+    expect(v?.contract).toBe("CLT");
+    expect(v?.workplace).toBe("Presencial");
+    expect(v?.published).toBe("2026-10-29");
+    expect(v?.salary).toBeNull();
+    expect(v?.link).toBe(
+      "https://www.melhoresempregos.com/vaga/vendedor/franca-sp/1/",
+    );
+  });
+
+  test("vaga com mais de 30 dias fica de fora; empresa confidencial vira null", () => {
+    expect(
+      parsePaginaMelhoresEmpregos(card("2026-09-01"), "2026-10-29"),
+    ).toEqual([]);
+    const [v] = parsePaginaMelhoresEmpregos(
+      card("2026-10-28", "Empresa Confidencial (Cadastre-se)"),
+      "2026-10-29",
+    );
+    expect(v?.company).toBeNull();
   });
 });

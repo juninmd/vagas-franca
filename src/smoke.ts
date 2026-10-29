@@ -22,6 +22,7 @@ const { syncHardFranca } = await import("./sources/hardfranca.ts");
 const { syncFrancaClassificados } = await import(
   "./sources/francaclassificados.ts"
 );
+const { syncMelhoresEmpregos } = await import("./sources/melhoresempregos.ts");
 const { syncAcif } = await import("./sources/acif.ts");
 const { syncTrabalhaBrasil } = await import("./sources/trabalhabrasil.ts");
 const { syncInfoJobs } = await import("./sources/infojobs.ts");
@@ -40,6 +41,7 @@ const falhas: string[] = [];
 const fontes: [string, () => Promise<unknown>][] = [
   ["emprego-franca", () => syncEmpregoFranca(hoje)],
   ["bne", () => syncBne(hoje)],
+  ["melhoresempregos", () => syncMelhoresEmpregos(hoje)],
   ["francaclassificados", () => syncFrancaClassificados(hoje)],
   ["empregoemfranca", () => syncEmpregoEmFranca(hoje)],
   ["acif", () => syncAcif(hoje)],

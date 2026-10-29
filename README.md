@@ -22,6 +22,7 @@ Google News (RSS)   ─┘        │
 | **Gupy** (portal público) | API JSON `employability-portal.gupy.io` | ~130 vagas de Franca + ~32 das cidades vizinhas, empresa, contrato, modalidade, descrição |
 | **Emprego Franca** (empregofranca.com.br) | payload RSC do Next.js na página pública `/vagas` (20 vagas, 1 requisição) | salário exato/faixa em campo próprio, contrato, jornada, benefícios e WhatsApp/e-mail |
 | **Franca Classificados** | seção "Lista de Empregos" (~310 anúncios em texto livre); link por hash do texto, título = profissão no começo do anúncio | salário (só o rotulado "salário") e contato por regra |
+| **Melhores Empregos** | cards SSR em microdados `JobPosting`, `/vagas-em-franca-sp/N/` ordenado por data; só vaga dos últimos 30 dias | título, empresa (quando não é "confidencial"), contrato, modalidade e data real; o `baseSalary` do card é estimativa e é ignorado |
 | **Emprego em Franca** (empregoemfranca.com) | home (~70 vagas) + detalhe por vaga, parse por rótulos (`Remuneração:`, `Benefícios:`, `Enviar currículo até`) | empresa, salário, benefícios, prazo e contato — só da seção de candidatura |
 | **BNE** | HTML SSR `?Page=N`; data confirmada no `JobPosting` do detalhe (só vaga publicada nos últimos 30 dias entra) | cargo, empresa, modalidade, descrição |
 | **Hard Franca** (hardfranca.com.br) | `anuncios.php` com ~160 anúncios inline; o id crescente do anúncio faz de relógio (janela de ~1 mês) | texto livre: salário e contato extraídos por regra; título já publicado por outra fonte é descartado |
