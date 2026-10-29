@@ -5,10 +5,15 @@ import { REGION_CITIES } from "./config/region.ts";
 import { topic } from "./config/topic.ts";
 import { insertItem } from "./db.ts";
 import { syncAcif } from "./sources/acif.ts";
+import { syncBne } from "./sources/bne.ts";
+import { syncEmpregoEmFranca } from "./sources/empregoemfranca.ts";
 import { syncEmpregoFranca } from "./sources/empregofranca.ts";
 import { syncEmpregos } from "./sources/empregos.ts";
+import { syncFrancaClassificados } from "./sources/francaclassificados.ts";
 import { syncGupy, syncGupyRegiao } from "./sources/gupy.ts";
+import { syncHardFranca } from "./sources/hardfranca.ts";
 import { syncInfoJobs } from "./sources/infojobs.ts";
+import { syncMelhoresEmpregos } from "./sources/melhoresempregos.ts";
 import { syncTrabalhaBrasil } from "./sources/trabalhabrasil.ts";
 
 const parser = new Parser({ timeout: env.feedTimeoutMs });
@@ -86,6 +91,10 @@ export async function ingest(today: string): Promise<void> {
     ["empregos.com.br", syncEmpregos(today)],
     ["acif", syncAcif(today)],
     ["emprego-franca", syncEmpregoFranca(today)],
+    ["bne", syncBne(today)],
+    ["melhoresempregos", syncMelhoresEmpregos(today)],
+    ["francaclassificados", syncFrancaClassificados(today)],
+    ["empregoemfranca", syncEmpregoEmFranca(today)],
     ["gupy-regiao", syncGupyRegiao(today)],
     ["notícias", ingestNoticias()],
   ];
@@ -94,4 +103,10 @@ export async function ingest(today: string): Promise<void> {
     if (r.status === "rejected")
       console.warn(`  ! ${tarefas[i]?.[0]} falhou: ${r.reason}`);
   });
+  // Depois das outras: descarta anúncio cujo título já veio de outro portal.
+  try {
+    await syncHardFranca(today);
+  } catch (err) {
+    console.warn(`  ! hardfranca falhou: ${err}`);
+  }
 }

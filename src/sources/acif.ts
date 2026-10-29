@@ -98,7 +98,12 @@ export async function syncAcif(today: string): Promise<void> {
       link: v.link_visivel && v.link ? v.link : `${MURAL}#vaga-${v.id}`,
       source: "Mural ACIF",
       description: limpa(
-        [v.descricao, v.responsabilidade, v.requisitos_qualificacoes]
+        [
+          v.descricao,
+          v.responsabilidade,
+          v.requisitos_qualificacoes &&
+            `Requisitos: ${v.requisitos_qualificacoes}.`,
+        ]
           .filter(Boolean)
           .join(" "),
       ).slice(0, 1500),

@@ -56,6 +56,8 @@ const {
   markPosted,
 } = await import("../src/db.ts");
 
+const { salvaVagas } = await import("../src/sources/comum.ts");
+
 afterAll(() => {
   db.close();
   apaga();
@@ -271,5 +273,59 @@ describe("unpostedJobs", () => {
     const ids = unpostedJobs(10).map((j) => j.id);
     expect(ids).toContain("com-sal");
     expect(ids.indexOf("com-sal")).toBeLessThan(ids.indexOf("fresca"));
+  });
+});
+
+describe("salvaVagas — deduplicação entre portais", () => {
+  const nova = (over: Record<string, unknown> = {}) => {
+    const { area: _a, ...resto } = vaga({
+      title: "Operador de Caixa",
+      company: "Mercado Dedup",
+      link: "https://portal-a.com/1",
+      source: "Portal A",
+      ...over,
+    });
+    return resto;
+  };
+
+  test("mesma empresa+cargo em outra fonte conta como duplicada", () => {
+    const a = salvaVagas([nova()] as never, "2026-10-01");
+    const b = salvaVagas(
+      [
+        nova({
+          title: "OPERADOR DE CAIXA",
+          company: "MERCADO DEDUP",
+          link: "https://portal-b.com/9",
+          source: "Portal B",
+        }),
+      ] as never,
+      "2026-10-01",
+    );
+    expect(a.novas).toBe(1);
+    expect(b).toEqual({ novas: 0, total: 1, duplicadas: 1 });
+    expect(
+      lê(
+        new Bun.CryptoHasher("sha1")
+          .update("https://portal-b.com/9")
+          .digest("hex"),
+      ),
+    ).toBe(null);
+  });
+
+  test("dentro da mesma fonte nada é cortado (uma vaga por loja)", () => {
+    const r = salvaVagas(
+      [
+        nova({ link: "https://portal-a.com/10" }),
+        nova({ link: "https://portal-a.com/11" }),
+      ] as never,
+      "2026-10-01",
+    );
+    expect(r.duplicadas).toBe(0);
+    expect(r.novas).toBe(2);
+  });
+
+  test("reingestão da mesma vaga não vira duplicada de si mesma", () => {
+    const r = salvaVagas([nova()] as never, "2026-10-02");
+    expect(r).toEqual({ novas: 0, total: 1, duplicadas: 0 });
   });
 });

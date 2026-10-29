@@ -1,4 +1,4 @@
-import { parseSalario } from "./format.ts";
+import { extraiRequisitos, parseSalario } from "./format.ts";
 
 /**
  * O smoke GRAVA vagas no banco. `db.ts` abre o banco no import, então o guard
@@ -16,6 +16,13 @@ const { melhoresOportunidades } = await import("./destaques.ts");
 const { db } = await import("./db.ts");
 const { isoDay } = await import("./digest.ts");
 const { syncEmpregoFranca } = await import("./sources/empregofranca.ts");
+const { syncBne } = await import("./sources/bne.ts");
+const { syncEmpregoEmFranca } = await import("./sources/empregoemfranca.ts");
+const { syncHardFranca } = await import("./sources/hardfranca.ts");
+const { syncFrancaClassificados } = await import(
+  "./sources/francaclassificados.ts"
+);
+const { syncMelhoresEmpregos } = await import("./sources/melhoresempregos.ts");
 const { syncAcif } = await import("./sources/acif.ts");
 const { syncTrabalhaBrasil } = await import("./sources/trabalhabrasil.ts");
 const { syncInfoJobs } = await import("./sources/infojobs.ts");
@@ -33,10 +40,15 @@ const falhas: string[] = [];
 
 const fontes: [string, () => Promise<unknown>][] = [
   ["emprego-franca", () => syncEmpregoFranca(hoje)],
+  ["bne", () => syncBne(hoje)],
+  ["melhoresempregos", () => syncMelhoresEmpregos(hoje)],
+  ["francaclassificados", () => syncFrancaClassificados(hoje)],
+  ["empregoemfranca", () => syncEmpregoEmFranca(hoje)],
   ["acif", () => syncAcif(hoje)],
   ["trabalhabrasil", () => syncTrabalhaBrasil(hoje)],
   ["infojobs", () => syncInfoJobs(hoje)],
   ["empregos.com.br", () => syncEmpregos(hoje)],
+  ["hardfranca", () => syncHardFranca(hoje)],
 ];
 for (const [nome, run] of fontes) {
   try {
@@ -71,6 +83,28 @@ console.table(
     score: d.score,
     fonte: d.job.source,
   })),
+);
+
+const porSalario = jobs
+  .map((j) => ({ j, valor: parseSalario(j.salary) }))
+  .filter((x): x is { j: Job; valor: number } => x.valor !== null)
+  .sort((a, b) => b.valor - a.valor);
+console.log(
+  `\n=== LISTA ORDENADA POR SALÁRIO (top 25 de ${porSalario.length} com salário) ===`,
+);
+console.table(
+  porSalario.slice(0, 25).map((x, i) => ({
+    "#": i + 1,
+    R$: x.valor,
+    vaga: x.j.title.slice(0, 34),
+    empresa: (x.j.company ?? "—").slice(0, 22),
+    contrato: x.j.contract ?? "—",
+    requisitos: (extraiRequisitos(x.j.description) ?? "—").slice(0, 38),
+    fonte: x.j.source,
+  })),
+);
+console.log(
+  `\ncontrato informado/inferido: ${jobs.filter((j) => j.contract).length}/${jobs.length} · requisitos extraídos: ${jobs.filter((j) => extraiRequisitos(j.description)).length}/${jobs.length}`,
 );
 
 if (!jobs.length) falhas.push("banco vazio");

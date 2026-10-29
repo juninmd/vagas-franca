@@ -66,7 +66,7 @@ export const env = {
   // Teto por chamada de IA: sem isso um provider travado pendura o digest.
   aiTimeoutMs: num(process.env.AI_TIMEOUT_MS, 60000),
   // Páginas varridas por portal HTML (20 vagas/página, em geral).
-  pagesPerBoard: num(process.env.PAGES_PER_BOARD, 3),
+  pagesPerBoard: num(process.env.PAGES_PER_BOARD, 5),
   // Páginas de detalhe abertas por rodada — é onde estão salário e horário.
   detailPages: num(process.env.DETAIL_PAGES, 12),
 };

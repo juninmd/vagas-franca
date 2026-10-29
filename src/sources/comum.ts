@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto";
 import { classify } from "../config/areas.ts";
 import { env } from "../config/env.ts";
-import { inRegion } from "../config/region.ts";
-import { type NewJob, upsertJob } from "../db.ts";
-import { ehCadastroDeCurriculo, ehPcd, limpaTitulo } from "../format.ts";
+import { inRegion, norm } from "../config/region.ts";
+import { type NewJob, upsertJob, vagasComEmpresa } from "../db.ts";
+import {
+  ehCadastroDeCurriculo,
+  ehPcd,
+  extraiSalarioRotulado,
+  inferirContrato,
+  limpaTitulo,
+} from "../format.ts";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -122,13 +128,28 @@ const vazioNull = (s: string | null): string | null => (s?.trim() ? s : null);
  * Grava a lista de vagas de uma fonte: limpa o ruído de portal do título,
  * descarta o que não é da região nem é vaga de verdade, deriva a área e
  * deduplica pelo link. Devolve quantas eram inéditas.
+ *
+ * Mesmo anunciante em dois portais (empresa + cargo iguais, fontes diferentes)
+ * vale uma vaga só: a primeira fonte que gravou fica, as outras contam em
+ * `duplicadas`. Dentro da mesma fonte nada é cortado — a Gupy publica uma vaga
+ * por loja com o mesmo título e a mesma empresa.
  */
 export function salvaVagas(
   vagas: Omit<NewJob, "area">[],
   today: string,
-): { novas: number; total: number } {
+): { novas: number; total: number; duplicadas: number } {
   let novas = 0;
   let total = 0;
+  let duplicadas = 0;
+  const chave = (empresa: string, titulo: string) =>
+    `${norm(empresa)}|${norm(titulo)}`;
+  const conhecidas = new Set<string>();
+  const fontesPorChave = new Map<string, Set<string>>();
+  for (const r of vagasComEmpresa()) {
+    conhecidas.add(r.id);
+    const k = chave(r.company, r.title);
+    fontesPorChave.set(k, (fontesPorChave.get(k) ?? new Set()).add(r.source));
+  }
   for (const v of vagas) {
     if (!v.title || !v.link) continue;
     const city = normalizaCidade(v.city);
@@ -150,19 +171,38 @@ export function salvaVagas(
       city,
       contact: vazioNull(v.contact ?? null),
       company: vazioNull(v.company),
-      contract: vazioNull(v.contract),
+      // Quando a fonte não informa, o texto às vezes diz (salário rotulado, CLT,
+      // estágio) — só regra fechada, nunca IA, e a fonte sempre ganha.
+      salary: v.salary ?? extraiSalarioRotulado(v.description),
+      contract:
+        vazioNull(v.contract) ??
+        inferirContrato(`${title} ${v.description ?? ""}`),
       workplace: vazioNull(v.workplace),
       description: vazioNull(v.description),
     };
-    if (upsertJob(job, hash(v.link), today)) novas++;
+    const id = hash(v.link);
+    if (job.company && !conhecidas.has(id)) {
+      const fontes = fontesPorChave.get(chave(job.company, title));
+      if (fontes && [...fontes].some((f) => f !== v.source)) {
+        duplicadas++;
+        continue;
+      }
+    }
+    if (upsertJob(job, id, today)) novas++;
+    if (job.company) {
+      conhecidas.add(id);
+      const k = chave(job.company, title);
+      fontesPorChave.set(k, (fontesPorChave.get(k) ?? new Set()).add(v.source));
+    }
   }
-  return { novas, total };
+  return { novas, total, duplicadas };
 }
 
 /** Log padrão de fonte — o mesmo formato em todas facilita ler o console. */
 export function logFonte(
   nome: string,
-  r: { novas: number; total: number },
+  r: { novas: number; total: number; duplicadas?: number },
 ): void {
-  console.log(`  [${nome}] ${r.total} vagas (${r.novas} novas)`);
+  const dup = r.duplicadas ? `, ${r.duplicadas} já vistas em outro portal` : "";
+  console.log(`  [${nome}] ${r.total} vagas (${r.novas} novas${dup})`);
 }
