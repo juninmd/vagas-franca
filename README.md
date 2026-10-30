@@ -193,9 +193,6 @@ Modelo completo em [docs/parsers-e-ia.md](docs/parsers-e-ia.md).
 - A listagem do TrabalhaBrasil vai a ~400 páginas, mas não é ordenada por data; por isso a coleta fica em poucas páginas.
 - Emprego Franca entrega só as 20 primeiras vagas; o resto da lista é carregado no navegador.
 
-> [!WARNING]
-> A CI do repositório (`Validate`, Security Scan e Docker) falha em segundos em todos os runs desde 23/10, sem passos nem log. É compatível com bloqueio de cobrança do GitHub Actions, que o `AGENTS.md` descreve; não foi confirmado e não é o código.
-
 ## 📄 Licença
 
 O repositório não declara licença: não há arquivo `LICENSE`.
