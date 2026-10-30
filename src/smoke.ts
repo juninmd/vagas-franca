@@ -96,10 +96,10 @@ console.table(
   porSalario.slice(0, 25).map((x, i) => ({
     "#": i + 1,
     R$: x.valor,
-    vaga: x.j.title.slice(0, 34),
-    empresa: (x.j.company ?? "—").slice(0, 22),
+    vaga: x.j.title.slice(0, 30),
+    empresa: (x.j.company ?? "—").slice(0, 20),
     contrato: x.j.contract ?? "—",
-    requisitos: (extraiRequisitos(x.j.description) ?? "—").slice(0, 38),
+    requisitos: (extraiRequisitos(x.j.description) ?? "—").slice(0, 32),
     fonte: x.j.source,
   })),
 );
