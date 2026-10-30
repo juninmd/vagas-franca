@@ -12,7 +12,11 @@
     "smoke": "bun run src/smoke.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check --write ."
+    "lint": "biome check --write .",
+    "web": "bun run src/server.ts",
+    "web:install": "cd web && bun install --frozen-lockfile",
+    "web:build": "cd web && bun run build",
+    "web:dev": "cd web && bun run dev"
   },
   "dependencies": {
     "node-cron": "^3.0.3",

@@ -24,7 +24,9 @@ Uma coleta rápida traz cerca de 680 vagas de 10 fontes em 2,5 minutos, com sal�
 
 ## 💡 Por que
 
-O escopo é pequeno de propósito: **vagas de Franca e microrregião, publicadas no Telegram**. Não é um portal de candidatura e não tem interface web.
+O escopo é pequeno de propósito: **vagas de Franca e microrregião, publicadas no Telegram e numa página de consulta**. Não é um portal de candidatura: cada vaga leva ao anúncio original.
+
+🖥️ **Uma página só para olhar tudo.** Busca, filtros por área, contrato e salário mínimo, ordenação por maior salário e o detalhe de cada vaga, com tema claro e escuro pelo sistema e boa no celular. [Como funciona](docs/web.md).
 
 🔎 **Muitas fontes, uma lista.** Portais nacionais e murais locais (ACIF, classificados, RH de empresas) entram no mesmo banco, sem repetir a vaga: dedupe por link e por empresa + cargo. [Cada fonte](docs/fontes.md).
 
@@ -35,6 +37,34 @@ O escopo é pequeno de propósito: **vagas de Franca e microrregião, publicadas
 🧭 **Diz o que não cobre.** Não existe lista oficial das vagas da cidade; os [limites](docs/fontes.md#cobertura-e-limites) estão escritos, não escondidos.
 
 ## 🖼️ Tour
+
+### Interface web
+
+<table>
+<tr>
+<td><img src=".github/assets/screenshots/web-lista-claro.png" alt="Página Vagas em Franca-SP no tema claro: quatro quadros de resumo, filtros na lateral e cartões com cargo, empresa, salário e requisitos, do maior salário para o menor" width="860" /><br/><b>Lista</b> &ndash; resumo do que foi coletado, filtros com contagem, busca e vagas ordenadas por salário.</td>
+</tr>
+<tr>
+<td><img src=".github/assets/screenshots/web-detalhe-claro.png" alt="Gaveta de detalhe de uma vaga de estágio: salário de R$ 1.946, prazo, contrato, requisitos, descrição do anúncio e o botão Ver vaga e se candidatar" width="860" /><br/><b>Detalhe</b> (<kbd>Enter</kbd> no cartão, <kbd>Esc</kbd> fecha) &ndash; salário, prazo, requisitos, descrição e o link para se candidatar.</td>
+</tr>
+</table>
+
+<details>
+<summary>🌗 Tema escuro e celular</summary>
+
+<table>
+<tr>
+<td width="60%"><img src=".github/assets/screenshots/web-lista-escuro.png" alt="A mesma lista no tema escuro, escolhido pelo sistema" /></td>
+<td width="20%"><img src=".github/assets/screenshots/web-celular.png" alt="A lista no celular: resumo compacto, busca, ordenação e um cartão por linha" /></td>
+<td width="20%"><img src=".github/assets/screenshots/web-celular-filtros.png" alt="A folha de filtros no celular, com salário mínimo, áreas e o botão Ver 1.033 vagas" /></td>
+</tr>
+</table>
+
+</details>
+
+<sub>Prints da interface de 30/10/2026, do build de produção sobre uma coleta real de 1.033 vagas; a vaga do detalhe é escolhida sem contato de empresa. Para regenerar: `scripts/web-screenshots.mjs`.</sub>
+
+### Telegram e terminal
 
 <table>
 <tr>
@@ -73,6 +103,14 @@ DB_PATH=/tmp/vagas.db PAGES_PER_BOARD=1 INFOJOBS_FILTROS=0 bun run smoke
 DB_PATH=/tmp/vagas.db bun run digest
 ```
 
+Para ver as vagas numa página:
+
+```bash
+bun run web:install             # dependências do front (web/)
+bun run web:build               # gera web/dist
+DB_PATH=/tmp/vagas.db bun run web   # abre em http://127.0.0.1:3000
+```
+
 > [!NOTE]
 > O `smoke` grava no banco e por isso **recusa rodar** sem `DB_PATH` ou com `./data/store.db`. Para publicar de verdade, preencha `TELEGRAM_BOT_TOKEN` e `TELEGRAM_CHAT_IDS` no `.env` e rode `bun run dev`.
 
@@ -103,6 +141,7 @@ flowchart LR
   D --> A["analysis.ts<br/>Raio-X"]
   G --> T["telegram.ts"]
   A --> T
+  D --> S["server.ts<br/>GET /api/vagas"] --> W["web/<br/>React + Tailwind"]
 ```
 
 - **Estado só avança com envio confirmado.** `posted`, `digested`, `snapshots` e `enriched` mudam depois da confirmação, nunca antes. [Detalhe](docs/parsers-e-ia.md#entrega-nada-é-marcado-sem-ter-saído).
@@ -131,6 +170,7 @@ Tudo por variável de ambiente (o Bun lê o `.env` sozinho). Modelo completo em 
 | `PAGES_PER_BOARD` | páginas varridas por portal HTML | `5` | `1` |
 | `INFOJOBS_FILTROS` | filtros públicos do InfoJobs abertos por rodada (a página expõe ~90) | `120` | `0` |
 | `DETAIL_PAGES` | detalhes abertos por rodada, por portal (o BNE usa `× 3`) | `12` | — |
+| `PORT`, `HOST` | porta e endereço da interface web (`bun run web`) | `3000`, `127.0.0.1` | `8080` |
 | `JOB_TTL_DAYS` | vaga não revista há tanto tempo é considerada encerrada | `21` | — |
 | `TELEGRAM_INTERVAL_MS` | espaçamento entre mensagens (o Telegram corta em ~20/min por grupo) | `3500` | — |
 | `AI_TIMEOUT_MS` | teto por chamada de IA | `60000` | — |
@@ -149,6 +189,11 @@ bun run ingest                   # só coleta; termina com código 0 (~1 min com
 bun run digest                   # só publica; sem token imprime no console
 bun run dev                      # um ciclo: coleta + digest (não executado como um comando só)
 bun start                        # loop com cron (processo contínuo; não executado aqui)
+bun run web:install              # dependências do front (web/bun.lock)
+bun run web:build                # tsc + vite build em web/dist
+DB_PATH=/tmp/vagas.db bun run web    # API e front em http://127.0.0.1:3000
+bun run web:dev                  # Vite com recarga a quente em :5173 (precisa da API na :3000)
+DB_PATH=/tmp/vagas.db node scripts/web-screenshots.mjs   # verifica a interface no navegador e regenera os prints (precisa do pacote playwright)
 DB_PATH=/tmp/vagas.db bun run smoke                      # coleta ao vivo e imprime fontes, top 10 e lista por salário
 DB_PATH=/tmp/vagas.db node scripts/readme-screenshots.mjs # regenera as imagens do README (~3 min; precisa do pacote playwright)
 ```
@@ -167,6 +212,7 @@ Mensagens de commit seguem Conventional Commits (`feat:`, `fix:`, `docs:`, `ci:`
 |---|---|
 | 🔎 [Fontes](docs/fontes.md) | cada portal, como é coletado, cobertura, limites e armadilhas já investigadas |
 | 🧪 [Parsers e IA](docs/parsers-e-ia.md) | regras de salário, contrato e requisitos; entrega confirmada; o que a IA faz e como é validada |
+| 🖥️ [Interface web](docs/web.md) | como rodar, contrato da API, decisões de interface e como a página é verificada |
 | 📊 [Raio-X e post](docs/raio-x-e-post.md) | a análise do mercado e o formato do post |
 | 🤖 [AGENTS.md](AGENTS.md) | instruções para agentes e padrão dos workflows |
 
@@ -181,6 +227,7 @@ O texto das vagas é escrito por terceiros e vira mensagem no Telegram; cada cam
 | Contato | `contatoSeguro`: só e-mail e telefone, com teto de tamanho na entrada |
 | Markdown | `mdSafe` escapa título, empresa e área antes de entrarem no post |
 | Banco | o `smoke` recusa rodar sem um `DB_PATH` descartável |
+| Interface web | escuta só em `127.0.0.1`; CSP que só aceita scripts do próprio servidor; `link` só `http(s)` e `contato` só e-mail/telefone; o React escapa todo texto de anúncio; caminho fora de `web/dist` é recusado |
 | Rede | aviso no boot se `NODE_TLS_REJECT_UNAUTHORIZED=0`; para certificado interno use `NODE_EXTRA_CA_CERTS` |
 
 Modelo completo em [docs/parsers-e-ia.md](docs/parsers-e-ia.md).
@@ -191,6 +238,7 @@ Modelo completo em [docs/parsers-e-ia.md](docs/parsers-e-ia.md).
 - **Gupy** devolveu 404 no ambiente de teste (29/10/2026) e não foi validada ao vivo; **Catho** e **Indeed** bloqueiam coleta e ficam de fora.
 - Hard Franca e Franca Classificados não têm data por anúncio: pode haver vaga já preenchida.
 - A listagem do TrabalhaBrasil vai a ~400 páginas, mas não é ordenada por data; por isso a coleta fica em poucas páginas.
+- A interface web não tem login e mostra e-mail e telefone que anunciantes publicaram: não a exponha à internet sem um proxy com autenticação. Ela não faz parte da imagem Docker do bot.
 - Emprego Franca entrega só as 20 primeiras vagas; o resto da lista é carregado no navegador.
 
 ## 📄 Licença

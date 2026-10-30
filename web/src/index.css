@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+/*
+ * Cores como tokens que já trazem os dois temas (`light-dark()`), então as
+ * classes (`bg-superficie`, `text-texto-2`…) não precisam de prefixo `dark:`.
+ * O tema vem do sistema; contraste de texto >= 4,5:1 nos dois.
+ */
+@theme {
+  --font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --color-fundo: light-dark(oklch(97.6% 0.004 250), oklch(17.5% 0.02 255));
+  --color-superficie: light-dark(oklch(100% 0 0), oklch(22% 0.02 255));
+  --color-superficie-2: light-dark(oklch(95.5% 0.006 250), oklch(27% 0.02 255));
+  --color-borda: light-dark(oklch(89% 0.008 250), oklch(33% 0.02 255));
+  --color-texto: light-dark(oklch(22% 0.03 255), oklch(94% 0.01 250));
+  --color-texto-2: light-dark(oklch(44% 0.025 255), oklch(77% 0.015 250));
+  --color-marca: light-dark(oklch(47% 0.13 155), oklch(77% 0.17 155));
+  --color-marca-fundo: light-dark(oklch(50% 0.14 155), oklch(74% 0.17 155));
+  --color-sobre-marca: light-dark(oklch(99% 0 0), oklch(20% 0.03 255));
+  --color-aviso: light-dark(oklch(48% 0.14 50), oklch(82% 0.13 80));
+  --color-aviso-fundo: light-dark(oklch(95.5% 0.04 85), oklch(30% 0.05 70));
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-fundo font-sans text-texto antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-marca);
+    outline-offset: 2px;
+  }
+}
+
+/*
+ * Gaveta de detalhe e folha de filtros: `<dialog>` nativo aberto com
+ * `showModal()`. O navegador cuida de foco, Esc, inércia do fundo e retorno do
+ * foco; aqui só o visual. `display` fica preso a `[open]` para não vencer o
+ * estado fechado.
+ */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background: oklch(14% 0.02 255 / 0.55);
+}
+
+dialog.gaveta {
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  background: var(--color-superficie);
+  color: var(--color-texto);
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: min(92dvh, 48rem);
+  border-radius: 1rem 1rem 0 0;
+  box-shadow: 0 -8px 32px oklch(0% 0 0 / 0.25);
+}
+
+dialog.gaveta[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 48rem) {
+  dialog.gaveta.lateral {
+    inset: 0 0 0 auto;
+    width: min(36rem, 100vw);
+    height: 100dvh;
+    border-radius: 0;
+    border-inline-start: 1px solid var(--color-borda);
+    box-shadow: -8px 0 32px oklch(0% 0 0 / 0.2);
+  }
+}
+
+/*
+ * Cartões fora da primeira tela só são desenhados quando chegam perto de
+ * aparecer. `contain-intrinsic-size` guarda um tamanho estimado para a barra
+ * de rolagem não pular.
+ */
+.cartao-adiado {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 13rem;
+}
