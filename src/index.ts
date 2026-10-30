@@ -12,10 +12,15 @@ async function once() {
   await digest();
 }
 
+// Os modos de um ciclo só (`--ingest`, `--digest`) terminam com `exit` explícito:
+// sem ele o processo ficava vivo depois da última fonte (conexão pendente),
+// e `bun run ingest` nunca devolvia o terminal.
 if (args.has("--ingest")) {
   await ingest(hoje());
+  process.exit(0);
 } else if (args.has("--digest")) {
   await digest();
+  process.exit(0);
 } else if (args.has("--loop")) {
   console.log(`[${topic.name}] agente ativo`);
   console.log(`  fuso:     ${env.cronTimezone}`);
