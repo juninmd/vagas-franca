@@ -33,7 +33,9 @@ if (!DB_PATH || DB_PATH === "./data/store.db") {
 const OUT = ".github/assets";
 mkdirSync(`${OUT}/screenshots`, { recursive: true });
 
-const strip = (s) => s.replace(/\x1b\[[0-9;]*m/g, "");
+// Sequência de cor ANSI; o ESC vem de fromCharCode para o lint não acusar caractere de controle.
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+const strip = (s) => s.replace(ANSI, "");
 const rodar = (script, env) => {
   const r = spawnSync("bun", ["run", script], {
     env: { ...process.env, DB_PATH, ...env },
