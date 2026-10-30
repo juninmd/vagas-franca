@@ -69,4 +69,6 @@ export const env = {
   pagesPerBoard: num(process.env.PAGES_PER_BOARD, 5),
   // Páginas de detalhe abertas por rodada — é onde estão salário e horário.
   detailPages: num(process.env.DETAIL_PAGES, 12),
+  /** Filtros públicos do InfoJobs abertos por rodada (a página expõe ~90). */
+  infojobsFiltros: num(process.env.INFOJOBS_FILTROS, 120),
 };

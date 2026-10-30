@@ -54,6 +54,9 @@ const {
   unpostedJobs,
   upsertJob,
   markPosted,
+  idsIgnoradas,
+  ignora,
+  esqueceIgnoradas,
 } = await import("../src/db.ts");
 
 const { salvaVagas } = await import("../src/sources/comum.ts");
@@ -327,5 +330,15 @@ describe("salvaVagas — deduplicação entre portais", () => {
   test("reingestão da mesma vaga não vira duplicada de si mesma", () => {
     const r = salvaVagas([nova()] as never, "2026-10-02");
     expect(r).toEqual({ novas: 0, total: 1, duplicadas: 0 });
+  });
+});
+
+describe("ignoradas", () => {
+  test("registra o descarte, lembra e esquece o antigo", () => {
+    ignora(["a", "b"], "teste", "2026-10-01");
+    ignora(["c"], "teste", "2026-10-25");
+    expect([...idsIgnoradas()].sort()).toEqual(["a", "b", "c"]);
+    expect(esqueceIgnoradas("2026-10-20")).toBe(2);
+    expect([...idsIgnoradas()]).toEqual(["c"]);
   });
 });

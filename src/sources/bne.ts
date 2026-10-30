@@ -1,5 +1,11 @@
 import { env } from "../config/env.ts";
-import { idsComDescricao, type NewJob } from "../db.ts";
+import {
+  esqueceIgnoradas,
+  idsComDescricao,
+  idsIgnoradas,
+  ignora,
+  type NewJob,
+} from "../db.ts";
 import { pool } from "../pool.ts";
 import {
   fetchHtml,
@@ -95,31 +101,54 @@ export async function syncBne(today: string): Promise<void> {
   }
 
   const jaTem = idsComDescricao();
+  // Descarte vale por uma semana: depois a vaga é reavaliada.
+  esqueceIgnoradas(
+    new Date(Date.parse(`${today}T12:00:00Z`) - 7 * 86400000)
+      .toISOString()
+      .slice(0, 10),
+  );
+  const descartadas = idsIgnoradas();
   const conhecidas = vagas.filter((v) => jaTem.has(hash(v.link)));
   const pendentes = vagas
-    .filter((v) => !jaTem.has(hash(v.link)))
-    .slice(0, env.detailPages * 5);
+    .filter((v) => !jaTem.has(hash(v.link)) && !descartadas.has(hash(v.link)))
+    .slice(0, env.detailPages * 3);
+  const rejeitadas: string[] = [];
+  // O BNE responde 403 depois de algumas dezenas de detalhes seguidos: ao primeiro
+  // 403/429 a rodada para, sem insistir; o resto fica para a próxima.
+  let bloqueado = false;
   const detalhadas = await pool(
     pendentes,
     1,
     async (v): Promise<Vaga | null> => {
+      if (bloqueado) return null;
       try {
         await Bun.sleep(DETAIL_DELAY_MS);
         const ld = parseJobPosting(await fetchHtml(v.link));
-        // Sem data confirmada não dá pra saber se a vaga está aberta.
+        // Sem data confirmada não dá pra saber se a vaga está aberta; vaga velha
+        // demais fica registrada para não ser reaberta na próxima rodada.
         if (!ld?.published) return null;
-        if (diasDesde(ld.published, today) > IDADE_MAXIMA_DIAS) return null;
+        if (diasDesde(ld.published, today) > IDADE_MAXIMA_DIAS) {
+          rejeitadas.push(hash(v.link));
+          return null;
+        }
         return {
           ...v,
           company: v.company ?? ld.company,
           description: ld.description?.slice(0, 1500) ?? v.description,
           published: ld.published,
         };
-      } catch {
+      } catch (err) {
+        if (/\b(403|429)\b/.test(String(err))) {
+          bloqueado = true;
+          console.warn(
+            "  ! bne: limite de requisições (403/429), parando a rodada",
+          );
+        }
         return null;
       }
     },
   );
+  ignora(rejeitadas, "bne: publicada há mais de 30 dias", today);
   logFonte(
     "bne",
     salvaVagas(

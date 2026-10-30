@@ -42,6 +42,15 @@ db.exec(`
     calcadista   INTEGER NOT NULL DEFAULT 0
   );
 
+  -- Vagas que uma fonte já abriu e descartou (ex.: BNE com mais de 30 dias).
+  -- Sem lembrar delas, toda rodada reabre as mesmas e nunca chega nas páginas
+  -- mais fundas da listagem.
+  CREATE TABLE IF NOT EXISTS ignoradas (
+    id     TEXT PRIMARY KEY,
+    motivo TEXT NOT NULL,
+    visto  TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS items (
     id          TEXT PRIMARY KEY,
     title       TEXT NOT NULL,
@@ -153,6 +162,28 @@ const upsertStmt = db.prepare(`
 const existsStmt = db.prepare<{ n: number }, [string]>(
   "SELECT COUNT(*) AS n FROM jobs WHERE id = ?",
 );
+
+/** Ids que uma fonte já abriu e descartou; não vale reabrir o detalhe. */
+export function idsIgnoradas(): Set<string> {
+  return new Set(
+    db
+      .query<{ id: string }, []>("SELECT id FROM ignoradas")
+      .all()
+      .map((r) => r.id),
+  );
+}
+
+export function ignora(ids: string[], motivo: string, hoje: string): void {
+  const stmt = db.prepare(
+    "INSERT OR REPLACE INTO ignoradas (id, motivo, visto) VALUES (?, ?, ?)",
+  );
+  for (const id of ids) stmt.run(id, motivo, hoje);
+}
+
+/** Esquece descarte antigo: vaga velha demais hoje pode ter sido republicada. */
+export function esqueceIgnoradas(antesDe: string): number {
+  return db.run("DELETE FROM ignoradas WHERE visto < ?", [antesDe]).changes;
+}
 
 /** Vagas com empresa identificada — base da deduplicação entre portais. */
 export function vagasComEmpresa(): {
