@@ -10,6 +10,7 @@ import {
   inferirContrato,
   limpaTitulo,
 } from "../format.ts";
+import { extractArticleFromHtml } from "@juninmd/digest-kit/core";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -75,6 +76,23 @@ interface JobPosting {
 }
 
 /**
+ * Extrai a descrição e título da vaga usando Readability do @juninmd/digest-kit
+ * quando a página não possui JSON-LD JobPosting estruturado.
+ */
+export function extractJobFromHtml(html: string): {
+  description: string | null;
+  title: string | null;
+} | null {
+  if (!html) return null;
+  const article = extractArticleFromHtml(html);
+  if (!article || !article.contentMarkdown) return null;
+  return {
+    description: article.contentMarkdown.slice(0, 1500),
+    title: article.title,
+  };
+}
+
+/**
  * Muitos portais publicam a vaga em JSON-LD `JobPosting` — descrição inteira,
  * empresa e data. Bem mais estável que raspar o HTML da página de detalhe.
  * O `baseSalary` NÃO é lido: nos portais brasileiros ele costuma ser faixa
@@ -103,6 +121,17 @@ export function parseJobPosting(html: string): {
       published: data.datePosted ?? null,
     };
   }
+
+  // Fallback: extrai conteúdo legível via digest-kit quando não há JobPosting
+  const extracted = extractJobFromHtml(html);
+  if (extracted?.description) {
+    return {
+      description: extracted.description,
+      company: null,
+      published: null,
+    };
+  }
+
   return null;
 }
 

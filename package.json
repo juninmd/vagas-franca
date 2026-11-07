@@ -19,6 +19,7 @@
     "web:dev": "cd web && bun run dev"
   },
   "dependencies": {
+    "@juninmd/digest-kit": "^0.4.0",
     "node-cron": "^3.0.3",
     "rss-parser": "^3.13.0"
   },

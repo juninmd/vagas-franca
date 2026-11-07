@@ -104,7 +104,7 @@ describe("caminhoSeguro", () => {
   });
 
   test("caminho normal fica dentro", () => {
-    expect(caminhoSeguro("/srv/dist", "/assets/app.js")).toBe(
+    expect(caminhoSeguro("/srv/dist", "/assets/app.js")?.replace(/\\/g, "/")).toBe(
       "/srv/dist/assets/app.js",
     );
   });
