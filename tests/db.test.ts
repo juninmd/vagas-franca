@@ -9,9 +9,12 @@ import { join } from "node:path";
  * é o caso real: o `store.db` em produção nasceu antes de `contact`, `deadline`
  * e `pcd`.
  *
- * O `DB_PATH` é fixado ANTES de importar `src/db.ts`, que abre o banco no
- * carregamento do módulo. Por isso este é o único arquivo de teste que importa
- * `db.ts`: o módulo é singleton e fica preso ao caminho do primeiro import.
+ * O caso "banco já populado" roda em SUBPROCESSO: `src/db.ts` é singleton e
+ * abre o banco no carregamento do módulo, então apagar o arquivo e recriá-lo
+ * aqui deixaria o handle apontando para um arquivo já removido (o teste lia
+ * zero linhas no Linux, onde o unlink de arquivo aberto funciona). O
+ * subprocesso recebe um `DB_PATH` legado só dele; a leitura é feita por uma
+ * conexão nova.
  */
 // O caminho vem de `tests/setup.ts`: `src/config/env.ts` congela `DB_PATH` no
 // carregamento do módulo, e outro arquivo de teste pode já tê-lo carregado —
@@ -20,32 +23,15 @@ const caminho = process.env.DB_PATH as string;
 if (!caminho?.includes(tmpdir()))
   throw new Error(`DB_PATH de teste inesperado: ${caminho}`);
 
-const apaga = () => {
+const apaga = (base: string) => {
   for (const sufixo of ["", "-shm", "-wal"]) {
     try {
-      unlinkSync(caminho + sufixo);
+      unlinkSync(base + sufixo);
     } catch {
       // arquivo pode não existir
     }
   }
 };
-apaga();
-
-// Banco legado: schema de jobs SEM contact/deadline/pcd, com uma linha dentro.
-const legado = new Database(caminho, { create: true });
-legado.exec(`
-  CREATE TABLE jobs (
-    id TEXT PRIMARY KEY, title TEXT NOT NULL, company TEXT, area TEXT,
-    salary TEXT, schedule TEXT, contract TEXT, workplace TEXT, city TEXT,
-    link TEXT NOT NULL, source TEXT NOT NULL, description TEXT, published TEXT,
-    first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
-    enriched INTEGER NOT NULL DEFAULT 0, posted INTEGER NOT NULL DEFAULT 0
-  );
-  INSERT INTO jobs (id,title,company,salary,link,source,first_seen,last_seen)
-  VALUES ('antiga','Costureira','Calçados X','R$ 1.707,00',
-          'https://ex.com/1','TrabalhaBrasil','2026-09-01','2026-09-01');
-`);
-legado.close();
 
 const {
   applyEnrichment,
@@ -63,7 +49,7 @@ const { salvaVagas } = await import("../src/sources/comum.ts");
 
 afterAll(() => {
   db.close();
-  apaga();
+  apaga(caminho);
 });
 
 const vaga = (over: Record<string, unknown> = {}) => ({
@@ -90,20 +76,61 @@ const lê = (id: string) =>
 
 describe("migração em banco já populado", () => {
   test("adiciona as colunas sem perder a linha antiga", () => {
-    const colunas = (
-      db.query("PRAGMA table_info(jobs)").all() as { name: string }[]
-    ).map((c) => c.name);
-    expect(colunas).toContain("contact");
-    expect(colunas).toContain("deadline");
-    expect(colunas).toContain("pcd");
+    // Banco legado: schema de jobs SEM contact/deadline/pcd, com uma linha
+    // dentro. Subprocesso porque `src/db.ts` já abriu o banco deste processo
+    // — recriar o arquivo aqui não seria visto pelo singleton.
+    const legadoPath = join(tmpdir(), `vagas-franca-legado-${process.pid}.db`);
+    apaga(legadoPath);
+    const legado = new Database(legadoPath, { create: true });
+    legado.exec(`
+        CREATE TABLE jobs (
+          id TEXT PRIMARY KEY, title TEXT NOT NULL, company TEXT, area TEXT,
+          salary TEXT, schedule TEXT, contract TEXT, workplace TEXT, city TEXT,
+          link TEXT NOT NULL, source TEXT NOT NULL, description TEXT, published TEXT,
+          first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
+          enriched INTEGER NOT NULL DEFAULT 0, posted INTEGER NOT NULL DEFAULT 0
+        );
+        INSERT INTO jobs (id,title,company,salary,link,source,first_seen,last_seen)
+        VALUES ('antiga','Costureira','Calçados X','R$ 1.707,00',
+                'https://ex.com/1','TrabalhaBrasil','2026-09-01','2026-09-01');
+      `);
+    legado.close();
 
-    const antiga = lê("antiga");
-    expect(antiga?.title).toBe("Costureira");
-    expect(antiga?.salary).toBe("R$ 1.707,00");
-    // Linha pré-existente entra com os defaults, nunca nula em `pcd`.
-    expect(antiga?.pcd).toBe(0);
-    expect(antiga?.deadline).toBe(null);
-  });
+    try {
+      // `bun -e` não aplica o preload de `[test]`: o isolamento vem só do
+      // `DB_PATH` explícito, senão o subprocesso cai no `./data/store.db`.
+      const r = Bun.spawnSync(["bun", "-e", 'await import("./src/db.ts")'], {
+        env: { ...process.env, DB_PATH: legadoPath },
+      });
+      expect(new TextDecoder().decode(r.stderr)).toBe("");
+      expect(r.exitCode).toBe(0);
+
+      const verificado = new Database(legadoPath);
+      try {
+        const colunas = (
+          verificado.query("PRAGMA table_info(jobs)").all() as {
+            name: string;
+          }[]
+        ).map((c) => c.name);
+        expect(colunas).toContain("contact");
+        expect(colunas).toContain("deadline");
+        expect(colunas).toContain("pcd");
+
+        const antiga = verificado
+          .query("SELECT * FROM jobs WHERE id = ?")
+          .get("antiga") as Record<string, unknown> | null;
+        expect(antiga?.title).toBe("Costureira");
+        expect(antiga?.salary).toBe("R$ 1.707,00");
+        // Linha pré-existente entra com os defaults, nunca nula em `pcd`.
+        expect(antiga?.pcd).toBe(0);
+        expect(antiga?.deadline).toBe(null);
+      } finally {
+        verificado.close();
+      }
+    } finally {
+      apaga(legadoPath);
+    }
+  }, 30_000);
 });
 
 describe("migração que falha de verdade", () => {
@@ -195,6 +222,11 @@ describe("applyEnrichment", () => {
 
   test("NÃO sobrescreve salário publicado pelo portal", () => {
     // O campo estruturado do portal vale mais que o que a IA lê da descrição.
+    upsertJob(
+      vaga({ link: "https://ex.com/1", salary: "R$ 1.707,00" }),
+      "antiga",
+      "2026-09-09",
+    );
     applyEnrichment("antiga", { salary: "R$ 9.999", schedule: null });
     expect(lê("antiga")?.salary).toBe("R$ 1.707,00");
     expect(lê("antiga")?.enriched).toBe(1);
