@@ -75,19 +75,14 @@ const lê = (id: string) =>
   > | null;
 
 describe("migração em banco já populado", () => {
-  test(
-    "adiciona as colunas sem perder a linha antiga",
-    () => {
-      // Banco legado: schema de jobs SEM contact/deadline/pcd, com uma linha
-      // dentro. Subprocesso porque `src/db.ts` já abriu o banco deste processo
-      // — recriar o arquivo aqui não seria visto pelo singleton.
-      const legadoPath = join(
-        tmpdir(),
-        `vagas-franca-legado-${process.pid}.db`,
-      );
-      apaga(legadoPath);
-      const legado = new Database(legadoPath, { create: true });
-      legado.exec(`
+  test("adiciona as colunas sem perder a linha antiga", () => {
+    // Banco legado: schema de jobs SEM contact/deadline/pcd, com uma linha
+    // dentro. Subprocesso porque `src/db.ts` já abriu o banco deste processo
+    // — recriar o arquivo aqui não seria visto pelo singleton.
+    const legadoPath = join(tmpdir(), `vagas-franca-legado-${process.pid}.db`);
+    apaga(legadoPath);
+    const legado = new Database(legadoPath, { create: true });
+    legado.exec(`
         CREATE TABLE jobs (
           id TEXT PRIMARY KEY, title TEXT NOT NULL, company TEXT, area TEXT,
           salary TEXT, schedule TEXT, contract TEXT, workplace TEXT, city TEXT,
@@ -99,45 +94,43 @@ describe("migração em banco já populado", () => {
         VALUES ('antiga','Costureira','Calçados X','R$ 1.707,00',
                 'https://ex.com/1','TrabalhaBrasil','2026-09-01','2026-09-01');
       `);
-      legado.close();
+    legado.close();
 
+    try {
+      // `bun -e` não aplica o preload de `[test]`: o isolamento vem só do
+      // `DB_PATH` explícito, senão o subprocesso cai no `./data/store.db`.
+      const r = Bun.spawnSync(["bun", "-e", 'await import("./src/db.ts")'], {
+        env: { ...process.env, DB_PATH: legadoPath },
+      });
+      expect(new TextDecoder().decode(r.stderr)).toBe("");
+      expect(r.exitCode).toBe(0);
+
+      const verificado = new Database(legadoPath);
       try {
-        // `bun -e` não aplica o preload de `[test]`: o isolamento vem só do
-        // `DB_PATH` explícito, senão o subprocesso cai no `./data/store.db`.
-        const r = Bun.spawnSync(["bun", "-e", 'await import("./src/db.ts")'], {
-          env: { ...process.env, DB_PATH: legadoPath },
-        });
-        expect(new TextDecoder().decode(r.stderr)).toBe("");
-        expect(r.exitCode).toBe(0);
+        const colunas = (
+          verificado.query("PRAGMA table_info(jobs)").all() as {
+            name: string;
+          }[]
+        ).map((c) => c.name);
+        expect(colunas).toContain("contact");
+        expect(colunas).toContain("deadline");
+        expect(colunas).toContain("pcd");
 
-        const verificado = new Database(legadoPath);
-        try {
-          const colunas = (
-            verificado.query("PRAGMA table_info(jobs)").all() as {
-              name: string;
-            }[]
-          ).map((c) => c.name);
-          expect(colunas).toContain("contact");
-          expect(colunas).toContain("deadline");
-          expect(colunas).toContain("pcd");
-
-          const antiga = verificado
-            .query("SELECT * FROM jobs WHERE id = ?")
-            .get("antiga") as Record<string, unknown> | null;
-          expect(antiga?.title).toBe("Costureira");
-          expect(antiga?.salary).toBe("R$ 1.707,00");
-          // Linha pré-existente entra com os defaults, nunca nula em `pcd`.
-          expect(antiga?.pcd).toBe(0);
-          expect(antiga?.deadline).toBe(null);
-        } finally {
-          verificado.close();
-        }
+        const antiga = verificado
+          .query("SELECT * FROM jobs WHERE id = ?")
+          .get("antiga") as Record<string, unknown> | null;
+        expect(antiga?.title).toBe("Costureira");
+        expect(antiga?.salary).toBe("R$ 1.707,00");
+        // Linha pré-existente entra com os defaults, nunca nula em `pcd`.
+        expect(antiga?.pcd).toBe(0);
+        expect(antiga?.deadline).toBe(null);
       } finally {
-        apaga(legadoPath);
+        verificado.close();
       }
-    },
-    30_000,
-  );
+    } finally {
+      apaga(legadoPath);
+    }
+  }, 30_000);
 });
 
 describe("migração que falha de verdade", () => {
