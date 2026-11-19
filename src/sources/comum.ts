@@ -52,20 +52,64 @@ export async function fetchText(url: string): Promise<string> {
   return res.text();
 }
 
+const ENTIDADES: Record<string, string> = {
+  nbsp: " ",
+  amp: "&",
+  quot: '"',
+  apos: "'",
+  lt: "<",
+  gt: ">",
+  aacute: "á",
+  agrave: "à",
+  acirc: "â",
+  atilde: "ã",
+  eacute: "é",
+  ecirc: "ê",
+  iacute: "í",
+  oacute: "ó",
+  ocirc: "ô",
+  otilde: "õ",
+  uacute: "ú",
+  ccedil: "ç",
+  Aacute: "Á",
+  Agrave: "À",
+  Acirc: "Â",
+  Atilde: "Ã",
+  Eacute: "É",
+  Ecirc: "Ê",
+  Iacute: "Í",
+  Oacute: "Ó",
+  Ocirc: "Ô",
+  Otilde: "Õ",
+  Uacute: "Ú",
+  Ccedil: "Ç",
+};
+
+const codePoint = (n: number, bruto: string): string =>
+  Number.isInteger(n) && n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff)
+    ? String.fromCodePoint(n)
+    : bruto;
+
+/**
+ * Decodifica entidades HTML numa passada só: `&amp;lt;` vira `&lt;` (literal),
+ * não `<`, e acentos como `&eacute;` não ficam crus no título da vaga.
+ */
+export const decodificaEntidades = (s: string): string =>
+  s.replace(/&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi, (m, dec, hex, nome) => {
+    if (dec) return codePoint(Number(dec), m);
+    if (hex) return codePoint(parseInt(hex, 16), m);
+    return ENTIDADES[nome as string] ?? m;
+  });
+
 /** Tira tags/entidades e colapsa espaço — o texto dos portais vem cheio de SVG. */
 export const limpa = (s: string) =>
-  s
-    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) =>
-      String.fromCharCode(parseInt(h, 16)),
-    )
+  decodificaEntidades(
+    s
+      .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " "),
+  )
     .replace(/\s+/g, " ")
     .trim();
 
