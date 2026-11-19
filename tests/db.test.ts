@@ -133,7 +133,10 @@ describe("migração em banco já populado", () => {
   }, 30_000);
 });
 
-describe("migração que falha de verdade", () => {
+// root ignora o bit 0444 e abre o banco para escrita (ex.: CI/container como root).
+const ehRoot = process.getuid?.() === 0;
+
+describe.skipIf(ehRoot)("migração que falha de verdade", () => {
   test("banco somente-leitura derruba o boot em vez de seguir sem as colunas", () => {
     // O `catch` da migração já tratou QUALQUER erro como "já migrado". Com o
     // banco travado ou somente-leitura o processo subia sem as colunas e só

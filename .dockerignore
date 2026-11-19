@@ -1,0 +1,14 @@
+# Segredos e estado local nunca entram no contexto de build.
+.env
+.env.*
+!.env.example
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+node_modules/
+web/
+tests/
+docs/
+.git/
+.github/
