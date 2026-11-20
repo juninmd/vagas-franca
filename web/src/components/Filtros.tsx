@@ -123,6 +123,10 @@ export function PainelFiltros({
           max={6000}
           step={250}
           value={filtros.salarioMin}
+          // Sem isto o leitor de tela lê "2500", sem moeda, e "0" em vez de "qualquer".
+          aria-valuetext={
+            filtros.salarioMin > 0 ? reais(filtros.salarioMin) : "qualquer"
+          }
           onChange={(e) =>
             onChange({ ...filtros, salarioMin: Number(e.target.value) })
           }
