@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   dataBr,
   diasDesde,
+  hojeIso,
   reais,
   rotuloIdade,
   rotuloPrazo,
@@ -73,5 +74,25 @@ describe("formatação", () => {
     expect(dataBr("2026-10-30T10:00:00Z")).toBe("30/10/2026");
     expect(dataBr(null)).toBeNull();
     expect(dataBr("lixo")).toBeNull();
+  });
+});
+
+describe("hojeIso", () => {
+  test("usa o dia do calendário local, não o de UTC", () => {
+    const tz = process.env.TZ;
+    process.env.TZ = "America/Sao_Paulo";
+    try {
+      // 20/11 às 23:30 em Franca já é 21/11 em UTC.
+      expect(hojeIso(new Date("2026-11-21T02:30:00Z"))).toBe("2026-11-20");
+      // O prazo que vence hoje continua "encerra hoje" até a meia-noite local.
+      expect(
+        rotuloPrazo("2026-11-20", hojeIso(new Date("2026-11-21T02:30:00Z"))),
+      ).toEqual({
+        texto: "encerra hoje",
+        urgente: true,
+      });
+    } finally {
+      process.env.TZ = tz;
+    }
   });
 });

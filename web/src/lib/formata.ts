@@ -3,7 +3,12 @@ const MS_DIA = 86_400_000;
 /** Meio-dia UTC: a diferença em dias não depende do fuso de quem lê. */
 const dia = (iso: string) => Date.parse(`${iso.slice(0, 10)}T12:00:00Z`);
 
-export const hojeIso = (agora = new Date()) => agora.toISOString().slice(0, 10);
+/** Dia de hoje no calendário de quem lê: `toISOString` daria o dia UTC, que em
+ * Franca (UTC-3) já vira o seguinte às 21h. */
+export const hojeIso = (agora = new Date()) => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${agora.getFullYear()}-${p(agora.getMonth() + 1)}-${p(agora.getDate())}`;
+};
 
 export const reais = (n: number) =>
   n.toLocaleString("pt-BR", {
