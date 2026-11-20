@@ -164,7 +164,9 @@ export function App() {
         )}
 
         {estado.status === "carregando" && (
-          <div className="mt-6 min-h-96">
+          <div className="mt-6 min-h-96" role="status">
+            {/* O esqueleto é aria-hidden: sem este texto, quem usa leitor de tela não sabe que está carregando. */}
+            <span className="sr-only">Carregando vagas…</span>
             {mostraEsqueleto && <Esqueleto />}
           </div>
         )}
