@@ -1,5 +1,12 @@
 // Bun carrega .env automaticamente — sem dotenv.
-const num = (v: string | undefined, d: number) => (v ? Number(v) : d);
+// Valor inválido vira o padrão: NaN esvaziava feeds e quebrava AbortSignal.timeout.
+export const num = (v: string | undefined, d: number): number => {
+  if (!v) return d;
+  const n = Number(v);
+  if (Number.isFinite(n) && n >= 0) return n;
+  console.warn(`[config] número inválido "${v}"; usando ${d}`);
+  return d;
+};
 
 /**
  * SecOps: `NODE_TLS_REJECT_UNAUTHORIZED=0` desliga a validação de certificado
