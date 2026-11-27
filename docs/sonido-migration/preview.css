@@ -1,0 +1,134 @@
+@import "../../web/src/index.css";
+@source "../../web/src";
+@source ".";
+
+/*
+ * Página de comparação. Usa os tokens e as classes reais do app; o layout da
+ * própria revisão é o único CSS que não vem da aplicação.
+ */
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+}
+
+.pv-page {
+  display: grid;
+  gap: 2rem;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.pv-head h1 {
+  margin: 0.25rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.pv-head p {
+  margin: 0.5rem 0 0;
+  max-width: 62ch;
+  color: var(--color-texto-2);
+  font-size: 0.875rem;
+}
+
+.pv-kicker {
+  margin: 0;
+  color: var(--color-marca);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pv-row {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pv-row__head h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+.pv-row__head p {
+  margin: 0.125rem 0 0;
+  color: var(--color-texto-2);
+  font-size: 0.8125rem;
+}
+
+.pv-cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.pv-col {
+  overflow: hidden;
+  border: 1px solid var(--color-borda);
+  border-radius: 0.5rem;
+  background: var(--color-fundo);
+}
+
+.pv-col__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  align-items: baseline;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-borda);
+  background: var(--color-superficie-2);
+  font-size: 0.75rem;
+}
+
+.pv-col__head strong {
+  font-weight: 700;
+}
+
+.pv-col--after .pv-col__head strong {
+  color: var(--color-marca);
+}
+
+.pv-col__head span {
+  color: var(--color-texto-2);
+}
+
+.pv-stage {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.pv-stage--cards {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.pv-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.pv-file {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--color-borda);
+  color: var(--color-texto-2);
+  font-size: 0.6875rem;
+  overflow-wrap: anywhere;
+}
+
+.pv-foot {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-borda);
+  color: var(--color-texto-2);
+  font-size: 0.75rem;
+}
