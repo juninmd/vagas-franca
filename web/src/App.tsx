@@ -1,3 +1,4 @@
+import { Badge, Button, Card, SearchField } from "@juninmd/sonido";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   ErroCarga,
@@ -180,8 +181,10 @@ export function App() {
         {estado.status === "ok" && estado.dados.total > 0 && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[17rem_1fr]">
             <aside className="hidden lg:block">
-              <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-lg border border-borda bg-superficie p-4">
-                {painel("lateral")}
+              <div className="sticky top-4 max-h-[calc(100dvh-2rem)] overflow-y-auto">
+                <Card surface="solid" padding="sm">
+                  {painel("lateral")}
+                </Card>
               </div>
             </aside>
 
@@ -196,18 +199,11 @@ export function App() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <div className="min-w-0 flex-1 basis-64">
-                  <label htmlFor="busca" className="sr-only">
-                    Buscar por cargo, empresa ou palavra
-                  </label>
-                  <input
-                    id="busca"
-                    type="search"
+                  <SearchField
                     value={filtros.busca}
-                    onChange={(e) =>
-                      mudaFiltros({ ...filtros, busca: e.target.value })
-                    }
+                    onChange={(busca) => mudaFiltros({ ...filtros, busca })}
+                    label="Buscar por cargo, empresa ou palavra"
                     placeholder="Buscar cargo, empresa ou palavra"
-                    className="w-full rounded-md border border-borda bg-superficie px-3 py-2 text-sm placeholder:text-texto-2"
                   />
                 </div>
 
@@ -234,13 +230,23 @@ export function App() {
                   </select>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => folha.current?.showModal()}
-                  className="rounded-md border border-borda bg-superficie px-3 py-2 text-sm font-medium hover:bg-superficie-2 lg:hidden"
-                >
-                  Filtros{ativos > 0 ? ` (${ativos})` : ""}
-                </button>
+                <span className="lg:hidden">
+                  <Button
+                    variant="secondary"
+                    appearance="outline"
+                    aria-label={
+                      ativos > 0 ? `Filtros, ${ativos} ativos` : "Filtros"
+                    }
+                    onClick={() => folha.current?.showModal()}
+                  >
+                    Filtros
+                    {ativos > 0 && (
+                      <Badge appearance="count" aria-hidden="true">
+                        {ativos}
+                      </Badge>
+                    )}
+                  </Button>
+                </span>
               </div>
 
               <p aria-live="polite" className="mt-3 text-sm text-texto-2">
@@ -268,10 +274,10 @@ export function App() {
                   </ul>
                   {mostrando.length < filtradas.length && (
                     <div className="mt-6 text-center">
-                      <button
-                        type="button"
+                      <Button
+                        variant="secondary"
+                        appearance="outline"
                         onClick={() => setLimite((l) => l + PASSO)}
-                        className="rounded-md border border-borda bg-superficie px-5 py-2.5 text-sm font-medium hover:bg-superficie-2"
                       >
                         Mostrar mais{" "}
                         {Math.min(PASSO, filtradas.length - mostrando.length)}{" "}
@@ -280,7 +286,7 @@ export function App() {
                           "pt-BR",
                         )}{" "}
                         restantes
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </>
@@ -304,13 +310,14 @@ export function App() {
         </h2>
         <div className="flex-1 overflow-y-auto p-4">{painel("folha")}</div>
         <div className="border-t border-borda p-4">
-          <button
-            type="button"
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
             onClick={() => folha.current?.close()}
-            className="w-full rounded-md bg-marca-fundo px-4 py-2.5 text-sm font-semibold text-sobre-marca hover:opacity-90"
           >
             Ver {filtradas.length.toLocaleString("pt-BR")} vagas
-          </button>
+          </Button>
         </div>
       </dialog>
     </div>

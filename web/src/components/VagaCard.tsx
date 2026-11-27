@@ -1,3 +1,4 @@
+import { Badge } from "@juninmd/sonido";
 import { rotuloIdade, rotuloPrazo } from "../lib/formata.ts";
 import type { Vaga } from "../types.ts";
 
@@ -7,9 +8,6 @@ interface Props {
   /** Cartões abaixo da primeira tela só são desenhados perto de aparecer. */
   adiado: boolean;
 }
-
-const chip =
-  "rounded-md border border-borda bg-superficie-2 px-2 py-0.5 text-xs text-texto-2";
 
 export function VagaCard({ vaga, onAbrir, adiado }: Props) {
   const idade = rotuloIdade(vaga.publicadaEm ?? vaga.vistaEm);
@@ -46,10 +44,26 @@ export function VagaCard({ vaga, onAbrir, adiado }: Props) {
       )}
 
       <ul className="flex flex-wrap gap-1.5">
-        {vaga.contrato && <li className={chip}>{vaga.contrato}</li>}
-        {vaga.modalidade && <li className={chip}>{vaga.modalidade}</li>}
-        {vaga.pcd && <li className={chip}>♿ PcD</li>}
-        {vaga.area && <li className={chip}>{vaga.area}</li>}
+        {vaga.contrato && (
+          <li>
+            <Badge tone="neutral">{vaga.contrato}</Badge>
+          </li>
+        )}
+        {vaga.modalidade && (
+          <li>
+            <Badge tone="neutral">{vaga.modalidade}</Badge>
+          </li>
+        )}
+        {vaga.pcd && (
+          <li>
+            <Badge tone="accent">♿ PcD</Badge>
+          </li>
+        )}
+        {vaga.area && (
+          <li>
+            <Badge tone="neutral">{vaga.area}</Badge>
+          </li>
+        )}
       </ul>
 
       {vaga.requisitos && (
@@ -65,13 +79,9 @@ export function VagaCard({ vaga, onAbrir, adiado }: Props) {
           {idade ? ` · ${idade}` : ""}
         </span>
         {prazo && (
-          <span
-            className={`rounded-md px-1.5 py-0.5 font-medium ${
-              prazo.urgente ? "bg-aviso-fundo text-aviso" : "bg-superficie-2"
-            }`}
-          >
+          <Badge tone={prazo.urgente ? "warning" : "neutral"}>
             {prazo.texto}
-          </span>
+          </Badge>
         )}
       </footer>
     </article>

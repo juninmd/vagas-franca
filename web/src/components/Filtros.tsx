@@ -1,3 +1,4 @@
+import { Badge, Button } from "@juninmd/sonido";
 import type { ReactNode } from "react";
 import {
   type Contagem,
@@ -61,7 +62,9 @@ function Opcao({
       />
       <span className="min-w-0 flex-1 truncate">{rotulo}</span>
       {n !== undefined && (
-        <span className="text-xs tabular-nums text-texto-2">{n}</span>
+        <Badge appearance="count" tone="neutral">
+          {n}
+        </Badge>
       )}
     </label>
   );
@@ -96,14 +99,17 @@ export function PainelFiltros({
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold">Filtros</h2>
-        <button
-          type="button"
-          onClick={onLimpar}
+        <Button
+          variant="link"
+          size="sm"
           disabled={ativos === 0}
-          className="rounded-md px-2 py-1 text-sm text-marca underline underline-offset-2 enabled:hover:bg-superficie-2 disabled:text-texto-2 disabled:no-underline"
+          aria-label={
+            ativos > 0 ? `Limpar ${ativos} filtros` : "Limpar filtros"
+          }
+          onClick={onLimpar}
         >
           Limpar{ativos > 0 ? ` (${ativos})` : ""}
-        </button>
+        </Button>
       </div>
 
       <div>

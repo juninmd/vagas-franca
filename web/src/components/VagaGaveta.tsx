@@ -1,3 +1,4 @@
+import { Button } from "@juninmd/sonido";
 import { useEffect, useRef } from "react";
 import { dataBr, rotuloIdade, rotuloPrazo } from "../lib/formata.ts";
 import type { Vaga } from "../types.ts";
@@ -102,13 +103,14 @@ export function VagaGaveta({ vaga, onFechar }: Props) {
                 <p className="mt-0.5 text-sm text-texto-2">{vaga.empresa}</p>
               )}
             </div>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              appearance="outline"
+              size="sm"
               onClick={() => ref.current?.close()}
-              className="rounded-md border border-borda px-3 py-1.5 text-sm font-medium hover:bg-superficie-2"
             >
               Fechar
-            </button>
+            </Button>
           </header>
 
           <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-5">
@@ -180,15 +182,16 @@ export function VagaGaveta({ vaga, onFechar }: Props) {
 
           <footer className="border-t border-borda p-4 sm:p-5">
             {vaga.link ? (
-              <a
+              <Button
                 href={vaga.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-md bg-marca-fundo px-4 py-2.5 text-center text-sm font-semibold text-sobre-marca hover:opacity-90"
+                size="lg"
+                className="w-full"
               >
                 Ver vaga e se candidatar
                 <span className="sr-only"> (abre em outra aba)</span>
-              </a>
+              </Button>
             ) : (
               <p className="text-center text-sm text-texto-2">
                 Esta fonte não tem link próprio para a vaga; use o contato

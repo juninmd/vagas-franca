@@ -1,0 +1,89 @@
+/*
+ * Ponte entre o Sonido e a identidade do vagas-franca.
+ *
+ * O app tem a própria paleta em `index.css` (`--color-*` com `light-dark()`).
+ * Aqui os tokens `--sn-*` que o design system consome apontam para eles, então
+ * nenhum componente novo troca o verde da marca por coral/violeta. O arquivo é
+ * importado depois de `@juninmd/sonido/styles.css` e de `index.css`: as regras
+ * soltas daqui vencem o `:root` do pacote (que é unlayered).
+ */
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
+  /* O Sonido fixa `color-scheme: dark` no :root; o app segue o sistema. */
+  color-scheme: light dark;
+
+  /* Superfícies e texto */
+  --sn-color-bg: var(--color-fundo);
+  --sn-color-surface: var(--color-superficie);
+  --sn-color-surface-2: var(--color-superficie-2);
+  --sn-color-surface-hover: var(--color-superficie-2);
+  --sn-color-border: var(--color-borda);
+  --sn-color-border-soft: var(--color-borda);
+  --sn-color-text: var(--color-texto);
+  --sn-color-text-dim: var(--color-texto-2);
+  --sn-color-text-faint: var(--color-texto-2);
+
+  /* Marca: o verde do app, não o coral do tema padrão do Sonido. */
+  --sn-color-accent: var(--color-marca-fundo);
+  --sn-color-accent-2: var(--color-marca);
+  --sn-color-on-accent: var(--color-sobre-marca);
+  --sn-color-on-danger: var(--color-sobre-marca);
+  --sn-color-success: var(--color-marca);
+  --sn-color-warning: var(--color-aviso);
+  --sn-color-danger: var(--color-aviso);
+  --sn-color-info: var(--color-marca);
+  --sn-color-aqua: var(--color-marca);
+  --sn-color-gold: var(--color-aviso);
+  --sn-gradient: linear-gradient(
+    135deg,
+    var(--color-marca-fundo),
+    var(--color-marca)
+  );
+  --sn-gradient-soft: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-marca-fundo) 14%, transparent),
+    color-mix(in srgb, var(--color-marca-fundo) 4%, transparent)
+  );
+  --sn-amb-2: var(--color-marca-fundo);
+  --sn-glass: color-mix(in srgb, var(--color-superficie) 60%, transparent);
+  --sn-glass-strong: color-mix(
+    in srgb,
+    var(--color-superficie) 94%,
+    transparent
+  );
+  --sn-glass-fill: linear-gradient(160deg, transparent, transparent);
+  --sn-glass-edge: var(--color-borda);
+
+  /* Tipografia e forma na escala densa que o app já usa. */
+  --sn-font: var(--font-sans);
+  --sn-font-display: var(--font-sans);
+  --sn-text-xs: 0.75rem;
+  --sn-text-sm: 0.875rem;
+  --sn-text-md: 0.875rem;
+  --sn-text-lg: 1.125rem;
+  --sn-radius-sm: 0.375rem;
+  --sn-radius: 0.5rem;
+  --sn-radius-lg: 0.5rem;
+  --sn-shadow-card: none;
+  --sn-ring: 0 0 0 4px color-mix(in srgb, var(--color-marca) 28%, transparent);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/*
+ * O resumo escondia as notas no celular para não empurrar as vagas para fora
+ * da primeira tela; o StatTile do Sonido não tem esse corte, então ele fica
+ * aqui, preso ao bloco do resumo.
+ */
+@media (max-width: 40rem) {
+  .resumo-sonido .sn-stattile__hint {
+    display: none;
+  }
+}

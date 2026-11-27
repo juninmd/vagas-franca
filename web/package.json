@@ -12,6 +12,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@juninmd/sonido": "^2.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
